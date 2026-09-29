@@ -38,7 +38,6 @@
             </div>
             <div class="flex items-center gap-2">
                 <button onclick="router.navigate('hub')" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold text-zinc-200 transition">ראשי</button>
-                <button onclick="router.navigate('adminHub')" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold text-amber-400 transition">⚙️ ניהול</button>
             </div>
         </div>
     </header>
@@ -47,11 +46,19 @@
 
     <main id="app" class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6"></main>
 
-    <footer class="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500 bg-zinc-950 mt-auto">
-        <p>פורטל משחקים עברי מתקדם • סנכרון GitHub מלא</p>
+    <footer class="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500 bg-zinc-950 mt-auto flex flex-col items-center gap-2">
+        <p>פורטל משחקים עברי מתקדם • מסונכרן אוטומטית</p>
+        <button onclick="tryAdminAccess()" class="text-zinc-600 hover:text-zinc-400 transition text-[10px]">⚙️ כניסת מנהל</button>
     </footer>
 
     <script>
+        const GITHUB_CONFIG = {
+            owner: "yiftachz",
+            repo: "HaaretzGames",
+            branch: "main",
+            path: "games-data.json"
+        };
+
         const DEFAULT_DATA = {
             connections: { 
                 title: "קשרים", 
@@ -118,109 +125,119 @@
             }
         };
 
-        function getGitHubConfig() {
-            try {
-                const conf = localStorage.getItem('hebrew_portal_gh_config');
-                return conf ? JSON.parse(conf) : { owner: '', repo: '', branch: 'main', path: 'puzzles.json', token: '' };
-            } catch (e) {
-                return { owner: '', repo: '', branch: 'main', path: 'puzzles.json', token: '' };
-            }
+        let cachedAppData = null;
+
+        function getGithubToken() {
+            return localStorage.getItem('hebrew_portal_gh_token') || '';
         }
 
-        function saveGitHubConfig(config) {
-            localStorage.setItem('hebrew_portal_gh_config', JSON.stringify(config));
+        async function fetchRemoteData() {
+            try {
+                const res = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`);
+                if (res.ok) {
+                    const remoteData = await res.json();
+                    cachedAppData = remoteData;
+                    localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(remoteData));
+                    return remoteData;
+                }
+            } catch (e) {}
+            return null;
         }
 
         function getAppData() {
+            if (cachedAppData) return cachedAppData;
             try {
                 const saved = localStorage.getItem('hebrew_game_portal_v3');
-                if (saved) return JSON.parse(saved);
+                if (saved) {
+                    cachedAppData = JSON.parse(saved);
+                    return cachedAppData;
+                }
             } catch (e) {}
+            cachedAppData = DEFAULT_DATA;
             return DEFAULT_DATA;
         }
 
-        function saveAppData(data) { 
-            localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(data)); 
-        }
+        async function saveAppData(data) {
+            cachedAppData = data;
+            localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(data));
+            
+            const token = getGithubToken();
+            if (!token) return; // Silent if no token configured yet
 
-        async function syncFetchFromGitHub() {
-            const cfg = getGitHubConfig();
-            if (!cfg.owner || !cfg.repo || !cfg.path) {
-                throw new Error('הגדרות GitHub חסרות');
-            }
-            const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}?ref=${cfg.branch}`;
-            const headers = { 'Accept': 'application/vnd.github.v3+json' };
-            if (cfg.token) headers['Authorization'] = `token ${cfg.token}`;
-
-            const res = await fetch(url, { headers });
-            if (!res.ok) throw new Error('שגיאה בטעינה מ-GitHub');
-            const json = await res.json();
-            const content = JSON.parse(decodeURIComponent(escape(atob(json.content))));
-            saveAppData(content);
-            return { content, sha: json.sha };
-        }
-
-        async function syncPushToGitHub(dataObj, commitMsg = "Update game data via Portal Admin") {
-            const cfg = getGitHubConfig();
-            if (!cfg.owner || !cfg.repo || !cfg.path || !cfg.token) {
-                throw new Error('חסרים פרטי חיבור או טוקן GitHub');
-            }
-            const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
-            const headers = { 'Accept': 'application/vnd.github.v3+json', 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' };
-
-            // Get current file SHA
-            let sha = '';
             try {
-                const getRes = await fetch(`${url}?ref=${cfg.branch}`, { headers: { 'Accept': headers['Accept'], 'Authorization': headers['Authorization'] } });
+                showToast("מעדכן נתונים ב-GitHub...");
+                const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+                
+                // Get current file sha
+                const getRes = await fetch(apiUrl, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
+                });
+                let sha = null;
                 if (getRes.ok) {
-                    const j = await getRes.json();
-                    sha = j.sha;
+                    const fileData = await getRes.json();
+                    sha = fileData.sha;
                 }
-            } catch (e) {}
 
-            const contentEncoded = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj, null, 2))));
-            const body = {
-                message: commitMsg,
-                content: contentEncoded,
-                branch: cfg.branch
-            };
-            if (sha) body.sha = sha;
+                const jsonString = JSON.stringify(data, null, 2);
+                const base64Content = btoa(unescape(encodeURIComponent(jsonString)));
 
-            const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
-            if (!res.ok) {
-                const errJson = await res.json().catch(() => ({}));
-                throw new Error(errJson.message || 'שגיאה בשמירה ל-GitHub');
+                const putRes = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: "Update games data via Hebrew Portal",
+                        content: base64Content,
+                        sha: sha,
+                        branch: GITHUB_CONFIG.branch
+                    })
+                });
+
+                if (putRes.ok) {
+                    showToast("הנתונים סונכרנו בהצלחה עם GitHub!");
+                } else {
+                    showToast("שגיאה בסנכרון מול GitHub", true);
+                }
+            } catch (err) {
+                console.error(err);
             }
-            return await res.json();
         }
 
-        async function uploadImageToGitHub(base64Data, remotePath, commitMessage) {
-            const cfg = getGitHubConfig();
-            if (!cfg.owner || !cfg.repo || !cfg.token) throw new Error('חסר טוקן או הגדרות GitHub');
-            const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${remotePath}`;
-            const headers = { 'Accept': 'application/vnd.github.v3+json', 'Authorization': `token ${cfg.token}`, 'Content-Type': 'application/json' };
+        async function uploadImageToGitHub(path, base64Data) {
+            const token = getGithubToken();
+            if (!token) throw new Error("יש להגדיר קוד גישה (PAT) של GitHub בהגדרות המנהל");
 
-            let sha = '';
-            try {
-                const getRes = await fetch(`${url}?ref=${cfg.branch}`, { headers: { 'Accept': headers['Accept'], 'Authorization': headers['Authorization'] } });
-                if (getRes.ok) {
-                    const j = await getRes.json();
-                    sha = j.sha;
-                }
-            } catch (e) {}
+            const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`;
+            let sha = null;
+            const getRes = await fetch(apiUrl, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
+            });
+            if (getRes.ok) {
+                const fileData = await getRes.json();
+                sha = fileData.sha;
+            }
 
-            // Extract base64 raw string
-            const base64Content = base64Data.includes('base64,') ? base64Data.split('base64,')[1] : base64Data;
-            const body = {
-                message: commitMessage,
-                content: base64Content,
-                branch: cfg.branch
-            };
-            if (sha) body.sha = sha;
+            const base64Clean = base64Data.split(',')[1] || base64Data;
+            const putRes = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `Upload progressive image ${path}`,
+                    content: base64Clean,
+                    sha: sha,
+                    branch: GITHUB_CONFIG.branch
+                })
+            });
 
-            const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
-            if (!res.ok) throw new Error('שגיאה בהעלאת התמונה ל-GitHub');
-            return await res.json();
+            if (!putRes.ok) throw new Error("שגיאה בהעלאת התמונה ל-GitHub");
+            return `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${path}`;
         }
 
         function showToast(msg, isError = false) {
@@ -257,20 +274,33 @@
             });
         }
 
+        function tryAdminAccess() {
+            const pwd = prompt("הכנס סיסמת מנהל:");
+            if (pwd === "02102010") {
+                router.navigate('hub', { isAdmin: true });
+                showToast("התחברת כמנהל בהצלחה");
+            } else if (pwd !== null) {
+                showToast("סיסמה שגויה", true);
+            }
+        }
+
         const router = {
-            navigate: function(route, params = {}) {
+            navigate: async function(route, params = {}) {
                 window.scrollTo(0, 0);
                 const app = document.getElementById('app');
+                app.innerHTML = '<div class="text-center py-20 text-zinc-500">טוען נתונים...</div>';
+                
+                await fetchRemoteData();
+
                 app.innerHTML = '';
-                if (route === 'hub') renderHub(app);
+                if (route === 'hub') renderHub(app, params.isAdmin || false);
                 else if (route === 'game') renderGame(app, params.gameId, params.puzzleIndex || 0);
-                else if (route === 'adminHub') renderAdminHub(app);
-                else if (route === 'adminGame') renderAdminGame(app, params.gameId);
+                else if (route === 'admin') renderAdmin(app, params.gameId);
                 else if (route === 'adminForm') renderAdminForm(app, params.gameId, params.puzzleIndex);
             }
         };
 
-        function renderHub(container) {
+        function renderHub(container, isAdmin = false) {
             const gamesList = [
                 { id: 'connections', title: 'קשרים (Connections)', desc: 'מצאו 4 קבוצות של 4 מילים קשורות', icon: '🧩', color: 'from-amber-500/20 to-yellow-500/10' },
                 { id: 'chain', title: 'השרשרת (Chain)', desc: 'סדרו את חוליות הביניים בסדר הגיוני', icon: '🔗', color: 'from-blue-500/20 to-indigo-500/10' },
@@ -282,8 +312,11 @@
 
             container.innerHTML = `
                 <div class="space-y-8 py-4">
-                    <div class="text-center space-y-3 max-w-2xl mx-auto">
-                        <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">בחר משחק והתחל לשחק</h2>
+                    <div class="text-center space-y-3 max-w-2xl mx-auto flex justify-between items-center px-4">
+                        <div class="flex-1">
+                            <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">בחר משחק והתחל לשחק</h2>
+                        </div>
+                        ${isAdmin ? `<button onclick="router.navigate('hub', {isAdmin: false})" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-lg text-xs border border-red-500/30">יצוא ממצב מנהל</button>` : ''}
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${gamesList.map(g => `
@@ -293,15 +326,30 @@
                                     <h3 class="text-xl font-bold text-white mb-2">${g.title}</h3>
                                     <p class="text-zinc-400 text-sm mb-6">${g.desc}</p>
                                 </div>
-                                <div class="pt-4 border-t border-zinc-800/85">
-                                    <button onclick="router.navigate('game', {gameId: '${g.id}', puzzleIndex: 0})" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-xl text-sm transition shadow-lg">שחק</button>
+                                <div class="flex items-center gap-3 pt-4 border-t border-zinc-800/80">
+                                    <button onclick="router.navigate('game', {gameId: '${g.id}', puzzleIndex: 0})" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-xl text-sm transition shadow-lg">שחק</button>
+                                    ${isAdmin ? `<button onclick="router.navigate('admin', {gameId: '${g.id}'})" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold py-2.5 px-4 rounded-xl text-sm transition">⚙️ </button>` : ''}
                                 </div>
                             </div>
                         `).join('')}
                     </div>
+                    ${isAdmin ? `
+                        <div class="max-w-xl mx-auto bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4 mt-10">
+                            <h3 class="font-bold text-white text-lg">הגדרות סנכרון GitHub</h3>
+                            <p class="text-xs text-zinc-400">הכנס את ה-Personal Access Token שלך כדי לאפשר סנכרון אוטומטי בין מכשירים.</p>
+                            <input type="password" id="gh-token-input" value="${getGithubToken()}" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm">
+                            <button onclick="saveToken()" class="px-6 py-2.5 bg-yellow-500 text-black font-bold rounded-xl text-sm">שמור טוקן</button>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
+
+        window.saveToken = () => {
+            const val = document.getElementById('gh-token-input').value.trim();
+            localStorage.setItem('hebrew_portal_gh_token', val);
+            showToast("הטוקן נשמר בהצלחה!");
+        };
 
         function renderNextPuzzleButton(gameId, currentIndex, totalPuzzles) {
             if (currentIndex < totalPuzzles - 1) {
@@ -407,6 +455,7 @@
         function initChain(container, puzzle, gameId, puzzleIndex, totalPuzzles) {
             let slots = new Array(puzzle.middle.length).fill(null);
             let slotsColors = new Array(puzzle.middle.length).fill('');
+            
             let allSidelineWords = [...puzzle.middle.map(m => m.word), ...(puzzle.distractors || [])];
             allSidelineWords.sort(() => Math.random() - 0.5);
 
@@ -476,6 +525,8 @@
                             </div>
                         </div>
 
+                        <p class="text-center text-xs text-zinc-400">טיפ: ניתן לגרור חוליות או ללחוץ עליהן לשיבוץ מהיר!</p>
+
                         ${isWon ? `
                             <div class="p-6 bg-emerald-900/40 border border-emerald-500 rounded-xl space-y-3">
                                 <h3 class="text-xl font-bold text-emerald-400 text-center">${attempts >= 5 ? 'נגמרו הניסיונות! הנה התשובה הנכונה:' : 'הצלחת! הסברים לשרשרת:'}</h3>
@@ -496,23 +547,35 @@
 
             window.ch_dragStart = (e, word, source, slotIndex = null) => {
                 e.dataTransfer.setData('text/plain', JSON.stringify({ word, source, slotIndex }));
+                e.dataTransfer.effectAllowed = 'move';
             };
 
             window.ch_drop = (e, targetType, targetSlotIdx = null) => {
                 e.preventDefault();
                 if (isChecking || isWon) return;
                 try {
-                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                    const word = data.word, source = data.source, prevSlotIdx = data.slotIndex;
-                    if (source === 'slot' && prevSlotIdx !== null) slots[prevSlotIdx] = null;
-                    else if (source === 'sideline') allSidelineWords = allSidelineWords.filter(x => x !== word);
+                    const rawData = e.dataTransfer.getData('text/plain');
+                    if (!rawData) return;
+                    const data = JSON.parse(rawData);
+                    const word = data.word;
+                    const source = data.source;
+                    const prevSlotIdx = data.slotIndex;
+
+                    if (source === 'slot' && prevSlotIdx !== null) {
+                        slots[prevSlotIdx] = null;
+                    } else if (source === 'sideline') {
+                        allSidelineWords = allSidelineWords.filter(x => x !== word);
+                    }
 
                     if (targetType === 'slot' && targetSlotIdx !== null) {
-                        if (slots[targetSlotIdx]) allSidelineWords.push(slots[targetSlotIdx]);
+                        if (slots[targetSlotIdx]) {
+                            allSidelineWords.push(slots[targetSlotIdx]);
+                        }
                         slots[targetSlotIdx] = word;
                     } else if (targetType === 'sideline') {
                         allSidelineWords.push(word);
                     }
+
                     render();
                 } catch (err) {}
             };
@@ -520,17 +583,27 @@
             window.ch_quickPlace = (w) => {
                 if (isWon) return;
                 const idx = slots.indexOf(null);
-                if (idx > -1) { slots[idx] = w; allSidelineWords = allSidelineWords.filter(x => x !== w); render(); }
+                if (idx > -1) { 
+                    slots[idx] = w; 
+                    allSidelineWords = allSidelineWords.filter(x => x !== w); 
+                    render(); 
+                }
             };
 
             window.ch_remove = (idx) => {
                 if (isWon) return;
-                if (slots[idx]) { allSidelineWords.push(slots[idx]); slots[idx] = null; render(); }
+                if (slots[idx]) { 
+                    allSidelineWords.push(slots[idx]); 
+                    slots[idx] = null; 
+                    render(); 
+                }
             };
 
             window.ch_clear = () => { 
                 if (isWon) return;
-                allSidelineWords.push(...slots.filter(Boolean)); slots.fill(null); render(); 
+                allSidelineWords.push(...slots.filter(Boolean)); 
+                slots.fill(null); 
+                render(); 
             };
 
             window.ch_check = () => {
@@ -538,6 +611,7 @@
                 attempts++;
                 isChecking = true;
                 let correctCount = 0;
+                
                 slots.forEach((w, i) => {
                     if (w === puzzle.middle[i].word) { slotsColors[i] = 'green'; correctCount++; }
                     else slotsColors[i] = 'red';
@@ -545,8 +619,10 @@
                 render();
 
                 setTimeout(() => {
-                    if (correctCount === puzzle.middle.length) isWon = true;
-                    else if (attempts >= 5) {
+                    if (correctCount === puzzle.middle.length) {
+                        isWon = true;
+                    } else if (attempts >= 5) {
+                        showToast('נגמרו הניסיונות! הנה התשובה הנכונה', true);
                         slots = puzzle.middle.map(m => m.word);
                         allSidelineWords = [];
                         isWon = true;
@@ -614,7 +690,7 @@
                             <div class="space-y-2 pt-4">
                                 ${kbRows.map(row => `
                                     <div class="flex justify-center gap-1 sm:gap-2">
-                                        ${row.map(k => `<button onclick="w_key('${k}')" class="px-3 sm:px-4 py-3 bg-zinc-800 text-white font-bold rounded-lg text-lg shadow active:bg-zinc-600 transition">${k}</button>`).join('')}
+                                        ${row.map(k => `<button onclick="w_key('${k}')" class="px-3 sm:px-4 py-3 bg-zinc-800 text-white font-bold rounded-lg text-lg shadow active:bg-zinc-600 active:scale-95 transition">${k}</button>`).join('')}
                                     </div>
                                 `).join('')}
                                 <div class="flex justify-center gap-2 mt-2">
@@ -634,7 +710,7 @@
                     if (current.length !== 6) return showToast('נדרשות 6 אותיות בדיוק', true);
                     guesses.push(current);
                     if (current === target) { over = true; won = true; }
-                    else if (guesses.length === 6) over = true;
+                    else if (guesses.length === 6) { over = true; }
                     current = "";
                 } else if (current.length < 6) current += k;
                 render();
@@ -763,7 +839,9 @@
                     mistakes++;
                     if (mistakes >= 3) { over = true; won = false; }
                     else {
-                        for(let i=0; i<len; i++) if(input[i] !== ans[i]) input[i] = ""; 
+                        for(let i=0; i<len; i++) {
+                            if(input[i] !== ans[i]) input[i] = ""; 
+                        }
                         showToast('טעות! אותיות שגויות נמחקו', true);
                     }
                 }
@@ -828,137 +906,25 @@
             render();
         }
 
-        // ==================== SEPARATE ADMIN VIEW & GITHUB SYNC ====================
-
-        function renderAdminHub(container) {
-            const cfg = getGitHubConfig();
-            const gamesList = [
-                { id: 'connections', title: 'קשרים (Connections)', icon: '🧩' },
-                { id: 'chain', title: 'השרשרת (Chain)', icon: '🔗' },
-                { id: 'wordle', title: 'וורדל 6 אותיות', icon: '🔤' },
-                { id: 'questions20', title: '20 שאלות + בונוס', icon: '❓' },
-                { id: 'logicRiddle', title: 'הגיונית', icon: '💡' },
-                { id: 'progressiveImage', title: 'מי אני? (תמונות)', icon: '👤' },
-            ];
-
-            container.innerHTML = `
-                <div class="max-w-4xl mx-auto space-y-8 py-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-800 pb-6">
-                        <div>
-                            <h2 class="text-3xl font-black text-white">פאנל ניהול מערכת</h2>
-                            <p class="text-sm text-zinc-400 mt-1">ניהול תוכן וסנכרון ענן מול GitHub</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="adm_pullGithub()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition">📥 משיכה מ-GitHub</button>
-                            <button onclick="adm_pushGithub()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition">📤 שמירה ודחיפה לענן</button>
-                        </div>
-                    </div>
-
-                    <!-- GitHub Configuration Box -->
-                    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
-                        <h3 class="text-lg font-bold text-amber-400">⚙️ הגדרות חיבור ל-GitHub Repository</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                                <label class="text-xs text-zinc-400 block mb-1">Owner / משתמש</label>
-                                <input type="text" id="gh_owner" value="${cfg.owner}" class="w-full p-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm" placeholder="username">
-                            </div>
-                            <div>
-                                <label class="text-xs text-zinc-400 block mb-1">Repo / שם מאגר</label>
-                                <input type="text" id="gh_repo" value="${cfg.repo}" class="w-full p-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm" placeholder="repository-name">
-                            </div>
-                            <div>
-                                <label class="text-xs text-zinc-400 block mb-1">Branch / ענף</label>
-                                <input type="text" id="gh_branch" value="${cfg.branch || 'main'}" class="w-full p-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm" placeholder="main">
-                            </div>
-                            <div>
-                                <label class="text-xs text-zinc-400 block mb-1">Path for JSON / נתיב קובץ הנתונים</label>
-                                <input type="text" id="gh_path" value="${cfg.path || 'puzzles.json'}" class="w-full p-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm" placeholder="puzzles.json">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="text-xs text-zinc-400 block mb-1">GitHub Personal Access Token (PAT)</label>
-                                <input type="password" id="gh_token" value="${cfg.token}" class="w-full p-2.5 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm" placeholder="ghp_xxxxxxxxxxxx">
-                            </div>
-                        </div>
-                        <div class="flex justify-end pt-2">
-                            <button onclick="adm_saveConfig()" class="px-5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-sm transition">שמור הגדרות ענן</button>
-                        </div>
-                    </div>
-
-                    <!-- Game Management Modules -->
-                    <div>
-                        <h3 class="text-xl font-bold text-white mb-4">בחר משחק לניהול חידות ותכנים</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${gamesList.map(g => `
-                                <div onclick="router.navigate('adminGame', {gameId: '${g.id}'})" class="bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between cursor-pointer transition">
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-3xl">${g.icon}</span>
-                                        <span class="font-bold text-white text-base">${g.title}</span>
-                                    </div>
-                                    <span class="text-zinc-500">←</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        window.adm_saveConfig = () => {
-            const config = {
-                owner: document.getElementById('gh_owner').value.trim(),
-                repo: document.getElementById('gh_repo').value.trim(),
-                branch: document.getElementById('gh_branch').value.trim() || 'main',
-                path: document.getElementById('gh_path').value.trim() || 'puzzles.json',
-                token: document.getElementById('gh_token').value.trim()
-            };
-            saveGitHubConfig(config);
-            showToast('הגדרות GitHub נשמרו בהצלחה!');
-        };
-
-        window.adm_pullGithub = async () => {
-            try {
-                showToast('מוריד נתונים מ-GitHub...');
-                await syncFetchFromGitHub();
-                showToast('הנתונים עודכנו מהענן בהצלחה!');
-                router.navigate('adminHub');
-            } catch (err) {
-                showToast(err.message || 'שגיאה במשיכת נתונים', true);
-            }
-        };
-
-        window.adm_pushGithub = async () => {
-            try {
-                showToast('מעלה נתונים ל-GitHub...');
-                const data = getAppData();
-                await syncPushToGitHub(data, 'Manual sync from Admin Hub');
-                showToast('הנתונים הועלו בהצלחה לענן!');
-            } catch (err) {
-                showToast(err.message || 'שגיאה בשמירה לענן', true);
-            }
-        };
-
-        function renderAdminGame(container, gameId) {
+        function renderAdmin(container, gameId) {
             const data = getAppData();
             const gameData = data[gameId];
 
             container.innerHTML = `
-                <div class="max-w-3xl mx-auto space-y-6 py-6">
+                <div class="max-w-3xl mx-auto space-y-6 py-4">
                     <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
-                        <button onclick="router.navigate('adminHub')" class="text-zinc-400 hover:text-white">← חזרה לפאנל ניהול</button>
-                        <h2 class="text-2xl font-black text-white">${gameData.title}</h2>
-                        <button onclick="router.navigate('adminForm', {gameId: '${gameId}', puzzleIndex: -1})" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm transition">➕ הוסף חידה חדשה</button>
+                        <button onclick="router.navigate('hub', {isAdmin: true})" class="text-zinc-400">← חזרה</button>
+                        <h2 class="text-2xl font-black text-white">: ${gameData.title}</h2>
+                        ${gameId !== 'progressiveImage' || gameData.puzzles.length === 0 ? `<button onclick="router.navigate('adminForm', {gameId: '${gameId}', puzzleIndex: -1})" class="px-4 py-2 bg-yellow-500 text-black font-bold rounded-xl text-sm">➕ הוסף חדש</button>` : `<span class="text-xs text-zinc-500">חידה פעילה יחידה</span>`}
                     </div>
                     <div class="space-y-3">
-                        ${gameData.puzzles.length === 0 ? `<div class="text-zinc-500 text-center py-10">אין חידות. הוסף אחת!</div>` : ''}
+                        ${gameData.puzzles.length === 0 ? `<div class="text-zinc-500 text-center py-6">אין חידות. הוסף אחת!</div>` : ''}
                         ${gameData.puzzles.map((p, idx) => `
                             <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-bold text-white">חידה #${idx + 1}</h4>
-                                    <p class="text-xs text-zinc-400 mt-0.5">${p.name || p.answer || p.word || p.title || p.riddle || ''}</p>
-                                </div>
+                                <div><h4 class="font-bold text-white">חידה #${idx + 1}</h4><p class="text-xs text-zinc-500">${p.name || p.answer || p.word || p.title || p.riddle || ''}</p></div>
                                 <div class="flex gap-2">
-                                    <button onclick="router.navigate('adminForm', {gameId: '${gameId}', puzzleIndex:${idx}})" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition">עריכה</button>
-                                    <button onclick="adm_del('${gameId}',${idx})" class="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg text-sm transition">מחיקה</button>
+                                    <button onclick="router.navigate('adminForm', {gameId: '${gameId}', puzzleIndex:${idx}})" class="px-4 py-2 bg-zinc-800 text-white rounded-lg text-sm">עריכה</button>
+                                    ${gameId !== 'progressiveImage' ? `<button onclick="adm_del('${gameId}',${idx})" class="px-4 py-2 bg-red-900/40 text-red-300 rounded-lg text-sm">מחיקה</button>` : ''}
                                 </div>
                             </div>
                         `).join('')}
@@ -971,8 +937,8 @@
             const data = getAppData();
             data[gId].puzzles.splice(idx, 1);
             saveAppData(data);
-            showToast('החידה נמחקה בהצלחה');
-            renderAdminGame(document.getElementById('app'), gId);
+            showToast('נמחק בהצלחה');
+            renderAdmin(document.getElementById('app'), gId);
         };
 
         function renderAdminForm(container, gameId, puzzleIndex) {
@@ -994,81 +960,81 @@
 
             if (gameId === 'connections') {
                 formHtml = `
-                    <input type="text" id="f_name" value="${p.name || ''}" class="w-full p-2.5 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4" placeholder="שם החידה">
+                    <input type="text" id="f_name" value="${p.name || ''}" class="w-full p-2 bg-zinc-800 text-white rounded mb-4" placeholder="שם החידה">
                     ${p.groups.map((g, i) => `
                         <div class="border border-zinc-700 p-4 rounded-xl space-y-2 mt-4 bg-zinc-900/50">
                             <label class="text-sm font-bold text-amber-400">קבוצה ${i+1}</label>
-                            <input type="text" id="f_cat_${i}" value="${g.category}" class="w-full p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700" placeholder="שם הקטגוריה">
+                            <input type="text" id="f_cat_${i}" value="${g.category}" class="w-full p-2 bg-zinc-800 text-white rounded" placeholder="שם הקטגוריה">
                             <div class="grid grid-cols-2 gap-2">
-                                ${g.words.map((w, wi) => `<input type="text" id="f_w_${i}_${wi}" value="${w}" class="w-full p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700" placeholder="מילה ${wi+1}">`).join('')}
+                                ${g.words.map((w, wi) => `<input type="text" id="f_w_${i}_${wi}" value="${w}" class="w-full p-2 bg-zinc-800 text-white rounded" placeholder="מילה ${wi+1}">`).join('')}
                             </div>
                         </div>
                     `).join('')}
                 `;
             } else if (gameId === 'chain') {
                 formHtml = `
-                    <input type="text" id="f_c_name" value="${p.name || ''}" class="w-full p-2.5 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4" placeholder="שם השרשרת">
+                    <input type="text" id="f_c_name" value="${p.name || ''}" class="w-full p-2 bg-zinc-800 text-white rounded mb-4" placeholder="שם השרשרת">
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label class="text-xs text-zinc-400">מילת התחלה</label><input type="text" id="f_c_start" value="${p.start || ''}" class="w-full p-2.5 bg-zinc-800 text-white rounded-xl border border-zinc-700"></div>
-                        <div><label class="text-xs text-zinc-400">מילת סיום</label><input type="text" id="f_c_end" value="${p.end || ''}" class="w-full p-2.5 bg-zinc-800 text-white rounded-xl border border-zinc-700"></div>
+                        <div><label class="text-xs">מילת התחלה</label><input type="text" id="f_c_start" value="${p.start || ''}" class="w-full p-2 bg-zinc-800 text-white rounded"></div>
+                        <div><label class="text-xs">מילת סיום</label><input type="text" id="f_c_end" value="${p.end || ''}" class="w-full p-2 bg-zinc-800 text-white rounded"></div>
                     </div>
                     <label class="font-bold text-amber-400 block mb-2">חוליות נכונות בסדר עולה:</label>
                     <div id="chain-middle-container" class="space-y-3">
                         ${p.middle.map((m, i) => `
                             <div class="flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700">
-                                <input type="text" placeholder="מילה" class="f_m_word w-1/3 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700" value="${m.word}">
-                                <input type="text" placeholder="הסבר" class="f_m_exp flex-1 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700" value="${m.explanation}">
+                                <input type="text" placeholder="מילה" class="f_m_word w-1/3 p-2 bg-zinc-800 text-white rounded" value="${m.word}">
+                                <input type="text" placeholder="הסבר" class="f_m_exp flex-1 p-2 bg-zinc-800 text-white rounded" value="${m.explanation}">
                             </div>
                         `).join('')}
                     </div>
-                    <button type="button" onclick="addChainMiddleField()" class="mt-3 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold rounded-lg text-amber-400">+ הוסף חוליה</button>
+                    <button type="button" onclick="addChainMiddleField()" class="mt-2 px-3 py-1 bg-zinc-800 text-xs rounded text-amber-400">+ הוסף חוליה</button>
                     
                     <div class="mt-6">
                         <label class="font-bold text-amber-400 block mb-2">מסיחים (מילים שגויות לצדדים):</label>
-                        <input type="text" id="f_c_distractors" value="${(p.distractors || []).join(', ')}" class="w-full p-2.5 bg-zinc-800 text-white rounded-xl border border-zinc-700" placeholder="הפרד בפסיקים, למשל: סמי, סרט">
+                        <input type="text" id="f_c_distractors" value="${(p.distractors || []).join(', ')}" class="w-full p-2 bg-zinc-800 text-white rounded" placeholder="הפרד בפסיקים, למשל: סמי, סרט">
                     </div>
                 `;
             } else if (gameId === 'wordle') {
                 formHtml = `
                     <label class="block text-sm font-bold mb-1">מילה (6 אותיות)</label>
-                    <input type="text" id="f_w" value="${p.word}" class="w-full p-3 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4" placeholder="דוגמה: מחשבה">
+                    <input type="text" id="f_w" value="${p.word}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4" placeholder="דוגמה: מחשבה">
                     <label class="block text-sm font-bold mb-1">רמז</label>
-                    <input type="text" id="f_c" value="${p.clue}" class="w-full p-3 bg-zinc-800 text-white rounded-xl border border-zinc-700" placeholder="רמז למילה">
+                    <input type="text" id="f_c" value="${p.clue}" class="w-full p-3 bg-zinc-800 text-white rounded" placeholder="רמז למילה">
                 `;
             } else if (gameId === 'questions20') {
                 formHtml = `
-                    <input type="text" id="f_20_title" value="${p.title || ''}" class="w-full p-2.5 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4" placeholder="כותרת השאלון">
+                    <input type="text" id="f_20_title" value="${p.title || ''}" class="w-full p-2 bg-zinc-800 text-white rounded mb-4" placeholder="כותרת השאלון">
                     <div id="questions-items-container" class="space-y-3">
                         ${(p.items || []).map((item, i) => `
                             <div class="flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700">
-                                <span class="font-bold text-xs text-amber-400">${i+1}</span>
-                                <input type="text" placeholder="שאלה" class="q_item_q flex-1 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700" value="${item.q}">
-                                <input type="text" placeholder="תשובה" class="q_item_a w-1/3 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700" value="${item.a}">
+                                <span class="font-bold text-xs">${i+1}</span>
+                                <input type="text" placeholder="שאלה" class="q_item_q flex-1 p-2 bg-zinc-800 text-white rounded" value="${item.q}">
+                                <input type="text" placeholder="תשובה" class="q_item_a w-1/3 p-2 bg-zinc-800 text-white rounded" value="${item.a}">
                             </div>
                         `).join('')}
                     </div>
-                    <button type="button" onclick="add20QuestionField()" class="mt-3 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold rounded-lg text-amber-400">+ הוסף שאלה</button>
+                    <button type="button" onclick="add20QuestionField()" class="mt-2 px-3 py-1 bg-zinc-800 text-xs rounded text-amber-400">+ הוסף שאלה</button>
                 `;
             } else if (gameId === 'logicRiddle') {
                 formHtml = `
                     <label class="block text-sm font-bold mb-1">חידה</label>
-                    <input type="text" id="f_r" value="${p.riddle}" class="w-full p-3 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4" placeholder="טקסט החידה">
+                    <input type="text" id="f_r" value="${p.riddle}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4" placeholder="טקסט החידה">
                     <label class="block text-sm font-bold mb-1">תשובה (מילה אחת)</label>
-                    <input type="text" id="f_a" value="${p.answer}" class="w-full p-3 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4">
+                    <input type="text" id="f_a" value="${p.answer}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4">
                     <label class="block text-sm font-bold mb-1">תאריך/כותרת משנה</label>
-                    <input type="text" id="f_d" value="${p.date}" class="w-full p-3 bg-zinc-800 text-white rounded-xl border border-zinc-700">
+                    <input type="text" id="f_d" value="${p.date}" class="w-full p-3 bg-zinc-800 text-white rounded">
                 `;
             } else if (gameId === 'progressiveImage') {
                 formHtml = `
                     <label class="block text-sm font-bold mb-1">התשובה (מי הדמות?)</label>
-                    <input type="text" id="f_ans" value="${p.answer}" class="w-full p-3 bg-zinc-800 text-white rounded-xl border border-zinc-700 mb-4">
-                    <p class="text-sm text-zinc-400 mb-2">ניהול 6 רזולוציות התמונה (נשמרות מקומית וניתנות לדחיפה אוטומטית לנתיבי GitHub קבועים).</p>
+                    <input type="text" id="f_ans" value="${p.answer}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4">
+                    <p class="text-sm text-zinc-400 mb-2">העלה 6 רזולוציות מדורגות (החל מראשונית ומטושטשת ועד למקורית). התמונות יישמרו אוטומטית ב-GitHub בתיקיית images.</p>
                     <div class="space-y-3" id="img-uploads-container">
                         ${Array.from({length: 6}, (_, i) => `
-                            <div class="flex items-center gap-4 bg-zinc-900 p-3 rounded-xl border border-zinc-700">
-                                <div class="font-bold w-16 text-center text-amber-400">שלב ${i+1}</div>
-                                <input type="file" accept="image/*" onchange="handleImgFile(this, ${i})" class="text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-zinc-800 file:text-white">
-                                <img id="preview_${i}" src="${p.steps && p.steps[i] ? p.steps[i] : ''}" class="w-10 h-10 object-cover rounded-lg bg-zinc-950 ${p.steps && p.steps[i] ? '' : 'hidden'}">
+                            <div class="flex items-center gap-4 bg-zinc-900 p-3 rounded-lg border border-zinc-700">
+                                <div class="font-bold w-16 text-center">שלב ${i+1}</div>
+                                <input type="file" accept="image/*" onchange="handleProgImgFile(this, ${i})" class="text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-white">
+                                <img id="preview_${i}" src="${p.steps && p.steps[i] ? p.steps[i] : ''}" class="w-10 h-10 object-cover rounded bg-zinc-950 ${p.steps && p.steps[i] ? '' : 'hidden'}">
                                 <input type="hidden" id="f_img_${i}" value="${p.steps && p.steps[i] ? p.steps[i] : ''}">
                             </div>
                         `).join('')}
@@ -1077,13 +1043,13 @@
             }
 
             container.innerHTML = `
-                <div class="max-w-2xl mx-auto space-y-6 py-6">
+                <div class="max-w-2xl mx-auto space-y-6 py-4">
                     <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
-                        <button onclick="router.navigate('adminGame', {gameId: '${gameId}'})" class="text-zinc-400 hover:text-white">← ביטול</button>
+                        <button onclick="router.navigate('admin', {gameId: '${gameId}'})" class="text-zinc-400">← ביטול</button>
                         <h2 class="text-2xl font-black text-white">${isNew ? 'הוספת חידה חדשה' : 'עריכת חידה'}</h2>
-                        <button onclick="saveAdminForm('${gameId}', ${puzzleIndex})" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition">שמור שינויים</button>
+                        <button onclick="saveAdminForm('${gameId}', ${puzzleIndex})" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition">שמור שינויים</button>
                     </div>
-                    <div class="bg-zinc-900/40 p-5 sm:p-6 rounded-2xl border border-zinc-800">
+                    <div class="bg-zinc-900/30 p-4 sm:p-6 rounded-2xl border border-zinc-800">
                         ${formHtml}
                     </div>
                 </div>
@@ -1094,7 +1060,7 @@
             const container = document.getElementById('chain-middle-container');
             const div = document.createElement('div');
             div.className = "flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700";
-            div.innerHTML = `<input type="text" placeholder="מילה" class="f_m_word w-1/3 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700"><input type="text" placeholder="הסבר" class="f_m_exp flex-1 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700">`;
+            div.innerHTML = `<input type="text" placeholder="מילה" class="f_m_word w-1/3 p-2 bg-zinc-800 text-white rounded"><input type="text" placeholder="הסבר" class="f_m_exp flex-1 p-2 bg-zinc-800 text-white rounded">`;
             container.appendChild(div);
         };
 
@@ -1103,32 +1069,26 @@
             const count = container.children.length + 1;
             const div = document.createElement('div');
             div.className = "flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700";
-            div.innerHTML = `<span class="font-bold text-xs text-amber-400">${count}</span><input type="text" placeholder="שאלה" class="q_item_q flex-1 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700"><input type="text" placeholder="תשובה" class="q_item_a w-1/3 p-2 bg-zinc-800 text-white rounded-lg border border-zinc-700">`;
+            div.innerHTML = `<span class="font-bold text-xs">${count}</span><input type="text" placeholder="שאלה" class="q_item_q flex-1 p-2 bg-zinc-800 text-white rounded"><input type="text" placeholder="תשובה" class="q_item_a w-1/3 p-2 bg-zinc-800 text-white rounded">`;
             container.appendChild(div);
         };
 
-        window.handleImgFile = async (input, index) => {
+        window.handleProgImgFile = async (input, index) => {
             const file = input.files[0];
             if (!file) return;
-            const b64 = await fileToBase64(file);
-            document.getElementById(`f_img_${index}`).value = b64;
-            const preview = document.getElementById(`preview_${index}`);
-            preview.src = b64;
-            preview.classList.remove('hidden');
-            
-            // Optional GitHub Auto-Sync for Progressive Images using fixed static paths
-            const cfg = getGitHubConfig();
-            if (cfg.token && cfg.owner && cfg.repo) {
-                try {
-                    showToast(`מעלה תמונה ${index+1} ל-GitHub...`);
-                    const remoteImagePath = `assets/progressive_${index + 1}.jpg`;
-                    await uploadImageToGitHub(b64, remoteImagePath, `Update progressive image step ${index + 1}`);
-                    showToast(`תמונה ${index+1} הועלתה בהצלחה לנתיב הענן!`);
-                } catch (err) {
-                    showToast('שגיאה בהעלאת התמונה לענן', true);
-                }
-            } else {
-                showToast(`תמונה ${index+1} נטענה מקומית בהצלחה`);
+            try {
+                showToast(`מעלה תמונה ${index+1} ל-GitHub...`);
+                const b64 = await fileToBase64(file);
+                const path = `images/step_${index + 1}.jpg`;
+                const remoteUrl = await uploadImageToGitHub(path, b64);
+                
+                document.getElementById(`f_img_${index}`).value = remoteUrl;
+                const preview = document.getElementById(`preview_${index}`);
+                preview.src = remoteUrl;
+                preview.classList.remove('hidden');
+                showToast(`תמונה ${index+1} הועלתה וסונכרנה בהצלחה!`);
+            } catch (err) {
+                showToast(err.message, true);
             }
         };
 
@@ -1181,26 +1141,15 @@
                     for(let i=0; i<6; i++) p.steps.push(document.getElementById(`f_img_${i}`).value);
                 }
 
-                if (isNew) data[gameId].puzzles.push(p);
-                else data[gameId].puzzles[puzzleIndex] = p;
-
-                saveAppData(data);
-
-                // Attempt auto-push to GitHub if configured
-                const cfg = getGitHubConfig();
-                if (cfg.token && cfg.owner && cfg.repo) {
-                    try {
-                        showToast('שומר ומסנכרן מול GitHub...');
-                        await syncPushToGitHub(data, `Update puzzle item in ${gameId}`);
-                        showToast('נשמר וסונכרן לענן בהצלחה!');
-                    } catch (e) {
-                        showToast('נשמר מקומית (שגיאה בסנכרון ענן)', true);
-                    }
+                if (isNew) {
+                    if (gameId === 'progressiveImage') data[gameId].puzzles = [p]; // Single active puzzle constraint for progressive image
+                    else data[gameId].puzzles.push(p);
                 } else {
-                    showToast('נשמר מקומית בהצלחה!');
+                    data[gameId].puzzles[puzzleIndex] = p;
                 }
 
-                router.navigate('adminGame', {gameId});
+                await saveAppData(data);
+                router.navigate('admin', {gameId});
             } catch (err) {
                 showToast('שגיאה בשמירה. בדוק את הנתונים.', true);
                 console.error(err);
