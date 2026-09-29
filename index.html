@@ -32,7 +32,7 @@
             <div class="flex items-center gap-3 cursor-pointer" onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin || false})">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 to-amber-400 flex items-center justify-center font-black text-black text-xl shadow-lg">פ</div>
                 <div>
-                    <h1 class="font-extrabold text-xl text-white tracking-wide">פורטל המשחקים</h1>
+                    <h1 class="font-extrabold text-xl text-white tracking-wide">פורטל המשחקים של תמר</h1>
                     <p class="text-xs text-zinc-400">אתגרי חשיבה בעברית</p>
                 </div>
             </div>
@@ -65,28 +65,28 @@
         // Config for game announcements and integer codes
         const GAME_ACCESS_CONFIG = {
             connections: {
-                announcement: "אוהב אותך עכשיו\nאוהב אותך תמיד\nבלי עבר ובלי עתיד\nהדליקי הלפיד",
+                announcement: "אוף, אף פעם לא סדור\nאסוף, מגולגל או סתם פזור\nגם אם תשתמשי בי הרבה\nתמיד איזה שוונץ יצא",
                 code: 2010
             },
             chain: {
-                announcement: "אוהב אותך עכשיו\nאוהב אותך תמיד\nבלי עבר ובלי עתיד\nהדליקי הלפיד",
-                code: 2010
+                announcement: "שחור-לבן, שותק תמיד\nשומר הלילה, אני אעיד\nמגן עליה לא יחשדו בי!\nניחשת נכון, אני הוא___",
+                code: 0210
             },
             wordle: {
-                announcement: "אוהב אותך עכשיו\nאוהב אותך תמיד\nבלי עבר ובלי עתיד\nהדליקי הלפיד",
-                code: 2010
+                announcement: "לכל מקום אותם תיקח\nבשרב, בגשם, גם בשלג צח\nגם על של מריק לא תחוס\nעם גרביים כמו בארץ רוס",
+                code: 640
             },
             questions20: {
-                announcement: "אוהב אותך עכשיו\nאוהב אותך תמיד\nבלי עבר ובלי עתיד\nהדליקי הלפיד",
-                code: 2010
+                announcement: "עגול, קטן, מלא סוכר\nכמה? מלא, לא מבוקר\nחלילה לא להתאמץ\nרק קצת חלב ויש breakfetz",
+                code: 16
             },
             logicRiddle: {
-                announcement: "אוהב אותך עכשיו\nאוהב אותך תמיד\nבלי עבר ובלי עתיד\nהדליקי הלפיד",
-                code: 2010
+                announcement: "חירום, חירום, ענו מהר\nזו בטח יולי, יולי ברגר\nאך אם תרצו אתם להתקשר\nלכו חפשו מכשיר אחר",
+                code: 27
             },
             progressiveImage: {
-                announcement: "אוהב אותך עכשיו\nאוהב אותך תמיד\nבלי עבר ובלי עתיד\nהדליקי הלפיד",
-                code: 2010
+                announcement: "יושב על מדף\nרב בי הדף\nמזמן לא נפתחתי\nאבק רב צברתי\nדי, i had enough",
+                code: 1
             }
         };
 
@@ -415,7 +415,7 @@
                 <div class="space-y-8 py-4">
                     <div class="text-center space-y-3 max-w-2xl mx-auto flex justify-between items-center px-4">
                         <div class="flex-1">
-                            <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">בחר משחק והתחל לשחק</h2>
+                            <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">יום הולדת 16 לתמר</h2>
                         </div>
                         ${isAdmin ? `<button onclick="router.navigate('hub', {isAdmin: false})" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-lg text-xs border border-red-500/30">יציאה ממצב מנהל</button>` : ''}
                     </div>
