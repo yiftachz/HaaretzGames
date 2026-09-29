@@ -29,7 +29,7 @@
 
     <header class="border-b border-zinc-800 bg-zinc-900/90 backdrop-blur sticky top-0 z-40 px-4 py-3 shadow-md">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <div class="flex items-center gap-3 cursor-pointer" onclick="router.navigate('hub')">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin || false})">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 to-amber-400 flex items-center justify-center font-black text-black text-xl shadow-lg">פ</div>
                 <div>
                     <h1 class="font-extrabold text-xl text-white tracking-wide">פורטל המשחקים</h1>
@@ -37,7 +37,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="router.navigate('hub')" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold text-zinc-200 transition">ראשי</button>
+                <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin || false})" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold text-zinc-200 transition">ראשי</button>
             </div>
         </div>
     </header>
@@ -126,6 +126,7 @@
         };
 
         let cachedAppData = null;
+        window.currentIsAdmin = false;
 
         function getGithubToken() {
             return localStorage.getItem('hebrew_portal_gh_token') || '';
@@ -162,15 +163,15 @@
             localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(data));
             
             const token = getGithubToken();
-            if (!token) return; // Silent if no token configured yet
+            if (!token) return;
 
             try {
                 showToast("מעדכן נתונים ב-GitHub...");
                 const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
                 
-                // Get current file sha
+                // Always fetch fresh SHA right before commit to avoid conflict errors on sequential updates
                 const getRes = await fetch(apiUrl, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json', 'Cache-Control': 'no-cache' }
                 });
                 let sha = null;
                 if (getRes.ok) {
@@ -213,7 +214,7 @@
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`;
             let sha = null;
             const getRes = await fetch(apiUrl, {
-                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json' }
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json', 'Cache-Control': 'no-cache' }
             });
             if (getRes.ok) {
                 const fileData = await getRes.json();
@@ -277,6 +278,7 @@
         function tryAdminAccess() {
             const pwd = prompt("הכנס סיסמת מנהל:");
             if (pwd === "02102010") {
+                window.currentIsAdmin = true;
                 router.navigate('hub', { isAdmin: true });
                 showToast("התחברת כמנהל בהצלחה");
             } else if (pwd !== null) {
@@ -301,6 +303,7 @@
         };
 
         function renderHub(container, isAdmin = false) {
+            window.currentIsAdmin = isAdmin;
             const gamesList = [
                 { id: 'connections', title: 'קשרים (Connections)', desc: 'מצאו 4 קבוצות של 4 מילים קשורות', icon: '🧩', color: 'from-amber-500/20 to-yellow-500/10' },
                 { id: 'chain', title: 'השרשרת (Chain)', desc: 'סדרו את חוליות הביניים בסדר הגיוני', icon: '🔗', color: 'from-blue-500/20 to-indigo-500/10' },
@@ -316,7 +319,7 @@
                         <div class="flex-1">
                             <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">בחר משחק והתחל לשחק</h2>
                         </div>
-                        ${isAdmin ? `<button onclick="router.navigate('hub', {isAdmin: false})" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-lg text-xs border border-red-500/30">יצוא ממצב מנהל</button>` : ''}
+                        ${isAdmin ? `<button onclick="router.navigate('hub', {isAdmin: false})" class="px-3 py-1.5 bg-red-900/40 text-red-300 rounded-lg text-xs border border-red-500/30">יציאה ממצב מנהל</button>` : ''}
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${gamesList.map(g => `
@@ -362,7 +365,7 @@
             const data = getAppData();
             const gameData = data[gameId];
             if (!gameData || !gameData.puzzles || gameData.puzzles.length <= puzzleIndex) {
-                container.innerHTML = `<div class="text-center py-16 space-y-4"><h3 class="text-2xl font-bold text-white">אין חידה זמינה</h3><button onclick="router.navigate('hub')" class="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">חזרה לראשי</button></div>`;
+                container.innerHTML = `<div class="text-center py-16 space-y-4"><h3 class="text-2xl font-bold text-white">אין חידה זמינה</h3><button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">חזרה לראשי</button></div>`;
                 return;
             }
             const puzzle = gameData.puzzles[puzzleIndex];
@@ -389,7 +392,7 @@
                 container.innerHTML = `
                     <div class="max-w-xl mx-auto space-y-6 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-                            <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
+                            <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="text-sm text-zinc-400">חזרה</button>
                             <h2 class="text-xl font-bold text-white">${puzzle.name || 'קשרים'}</h2>
                             <div class="text-amber-400 font-bold text-sm">טעויות: ${mistakes}</div>
                         </div>
@@ -471,7 +474,7 @@
                 container.innerHTML = `
                     <div class="max-w-xl mx-auto space-y-6 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-                            <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
+                            <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="text-sm text-zinc-400">חזרה</button>
                             <h2 class="text-xl font-bold text-white">${puzzle.name || 'השרשרת'}</h2>
                             <div class="text-amber-400 font-bold text-sm">ניסיונות: ${attempts}/5</div>
                         </div>
@@ -655,7 +658,7 @@
                 container.innerHTML = `
                     <div class="max-w-md mx-auto space-y-4 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-                            <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
+                            <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="text-sm text-zinc-400">חזרה</button>
                             <h2 class="text-xl font-bold text-white">וורדל</h2>
                             <div class="text-amber-400 text-xs">${puzzle.clue}</div>
                         </div>
@@ -735,7 +738,7 @@
                 container.innerHTML = `
                     <div class="max-w-lg mx-auto space-y-6 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-                            <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
+                            <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="text-sm text-zinc-400">חזרה</button>
                             <h2 class="text-xl font-bold text-white">${puzzle.title}</h2>
                             <div class="text-amber-400 text-sm">${curr+1}/${items.length}</div>
                         </div>
@@ -765,9 +768,11 @@
         }
 
         function initLogicRiddle(container, puzzle, gameId, puzzleIndex, totalPuzzles) {
-            const ans = puzzle.answer.trim();
+            const ans = puzzle.answer; // keep exact including spaces
+            const lettersOnly = ans.replace(/\s+/g, '');
             const len = ans.length;
-            let input = new Array(len).fill("");
+            
+            let inputChars = new Array(len).fill("");
             let mistakes = 0;
             let hints = 0;
             let over = false;
@@ -778,7 +783,7 @@
                 container.innerHTML = `
                     <div class="max-w-md mx-auto space-y-6 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-                            <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
+                            <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="text-sm text-zinc-400">חזרה</button>
                             <h2 class="text-xl font-bold text-white">הגיונית</h2>
                             <div class="text-amber-400 text-sm">ניסיונות: ${3-mistakes}</div>
                         </div>
@@ -786,8 +791,13 @@
                             <div class="text-xs text-zinc-500 mb-2">${puzzle.date}</div>
                             <h3 class="text-xl font-bold text-white">${puzzle.riddle}</h3>
                         </div>
-                        <div class="flex justify-center gap-2" dir="rtl">
-                            ${Array.from({length: len}, (_, i) => `<div class="w-10 h-12 border-b-4 ${input[i] ? 'border-amber-500' : 'border-zinc-700'} flex items-center justify-center font-bold text-2xl text-white">${input[i]}</div>`).join('')}
+                        <div class="flex flex-wrap justify-center gap-1.5" dir="rtl">
+                            ${Array.from({length: len}, (_, i) => {
+                                if (ans[i] === ' ') {
+                                    return `<div class="w-4 flex items-center justify-center"></div>`;
+                                }
+                                return `<div class="w-10 h-12 border-b-4 ${inputChars[i] ? 'border-amber-500' : 'border-zinc-700'} flex items-center justify-center font-bold text-2xl text-white">${inputChars[i]}</div>`;
+                            }).join('')}
                         </div>
                         
                         ${over ? `
@@ -797,7 +807,7 @@
                             </div>
                         ` : `
                             <div class="flex gap-2 justify-center">
-                                <button onclick="r_hint()" class="px-4 py-2 bg-indigo-900/50 text-indigo-300 rounded-lg text-sm border border-indigo-500/30">רמז (${2-hints})</button>
+                                <button onclick="r_hint()" class="px-4 py-2 bg-indigo-900/50 text-indigo-300 rounded-lg text-sm border border-indigo-500/30">רמז</button>
                                 <button onclick="r_check()" class="px-6 py-2 bg-yellow-500 text-black font-bold rounded-lg text-sm shadow">אישור ניחוש</button>
                             </div>
                             <div class="space-y-2 pt-2">
@@ -818,29 +828,48 @@
             window.r_key = (k) => {
                 if(over) return;
                 if(k === 'BACK') {
-                    for(let i=len-1; i>=0; i--) if(input[i] && (hints === 0 || i >= hints)) { input[i] = ""; break; }
+                    for(let i=len-1; i>=0; i--) {
+                        if(ans[i] !== ' ' && inputChars[i] && (hints === 0 || ans.slice(0, i+1).replace(/\s+/g,'').length > hints)) { 
+                            inputChars[i] = ""; 
+                            break; 
+                        }
+                    }
                 } else {
-                    const idx = input.indexOf("");
-                    if (idx > -1) input[idx] = k;
+                    for(let i=0; i<len; i++) {
+                        if(ans[i] !== ' ' && !inputChars[i]) {
+                            inputChars[i] = k;
+                            break;
+                        }
+                    }
                 }
                 render();
             };
+
             window.r_hint = () => {
-                if (hints >= 2) return showToast('אין יותר רמזים', true);
-                input[hints] = ans[hints];
-                hints++;
-                render();
+                for(let i=0; i<len; i++) {
+                    if(ans[i] !== ' ' && !inputChars[i]) {
+                        inputChars[i] = ans[i];
+                        hints++;
+                        showToast('נוסף רמז');
+                        render();
+                        return;
+                    }
+                }
+                showToast('כל האותיות כבר הוצגו', true);
             };
+
             window.r_check = () => {
-                if(input.includes("")) return showToast('מלאו את כל התיבות', true);
-                const guess = input.join('');
+                for(let i=0; i<len; i++) {
+                    if(ans[i] !== ' ' && !inputChars[i]) return showToast('מלאו את כל התיבות', true);
+                }
+                const guess = inputChars.join('');
                 if (guess === ans) { over = true; won = true; }
                 else {
                     mistakes++;
                     if (mistakes >= 3) { over = true; won = false; }
                     else {
                         for(let i=0; i<len; i++) {
-                            if(input[i] !== ans[i]) input[i] = ""; 
+                            if(ans[i] !== ' ' && inputChars[i] !== ans[i]) inputChars[i] = ""; 
                         }
                         showToast('טעות! אותיות שגויות נמחקו', true);
                     }
@@ -862,7 +891,7 @@
                 container.innerHTML = `
                     <div class="max-w-md mx-auto space-y-6 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
-                            <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
+                            <button onclick="router.navigate('hub', {isAdmin: window.currentIsAdmin})" class="text-sm text-zinc-400">חזרה</button>
                             <h2 class="text-xl font-bold text-white">מי אני?</h2>
                             <div class="text-amber-400 text-sm">שלב ${curr+1}/${steps.length}</div>
                         </div>
@@ -1019,7 +1048,7 @@
                 formHtml = `
                     <label class="block text-sm font-bold mb-1">חידה</label>
                     <input type="text" id="f_r" value="${p.riddle}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4" placeholder="טקסט החידה">
-                    <label class="block text-sm font-bold mb-1">תשובה (מילה אחת)</label>
+                    <label class="block text-sm font-bold mb-1">תשובה (ניתן לכלול רווחים)</label>
                     <input type="text" id="f_a" value="${p.answer}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4">
                     <label class="block text-sm font-bold mb-1">תאריך/כותרת משנה</label>
                     <input type="text" id="f_d" value="${p.date}" class="w-full p-3 bg-zinc-800 text-white rounded">
@@ -1133,7 +1162,7 @@
                     });
                 } else if (gameId === 'logicRiddle') {
                     p.riddle = document.getElementById('f_r').value;
-                    p.answer = document.getElementById('f_a').value.trim();
+                    p.answer = document.getElementById('f_a').value; // allow spaces
                     p.date = document.getElementById('f_d').value;
                 } else if (gameId === 'progressiveImage') {
                     p.answer = document.getElementById('f_ans').value;
@@ -1142,7 +1171,7 @@
                 }
 
                 if (isNew) {
-                    if (gameId === 'progressiveImage') data[gameId].puzzles = [p]; // Single active puzzle constraint for progressive image
+                    if (gameId === 'progressiveImage') data[gameId].puzzles = [p];
                     else data[gameId].puzzles.push(p);
                 } else {
                     data[gameId].puzzles[puzzleIndex] = p;
@@ -1156,7 +1185,7 @@
             }
         };
 
-        window.onload = () => router.navigate('hub');
+        window.onload = () => router.navigate('hub', {isAdmin: false});
     </script>
 </body>
 </html>
