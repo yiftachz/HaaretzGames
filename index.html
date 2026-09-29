@@ -169,7 +169,6 @@
                 showToast("מעדכן נתונים ב-GitHub...");
                 const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
                 
-                // Always fetch fresh SHA right before commit to avoid conflict errors on sequential updates
                 const getRes = await fetch(apiUrl, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json', 'Cache-Control': 'no-cache' }
                 });
@@ -768,11 +767,11 @@
         }
 
         function initLogicRiddle(container, puzzle, gameId, puzzleIndex, totalPuzzles) {
-            const ans = puzzle.answer; // keep exact including spaces
-            const lettersOnly = ans.replace(/\s+/g, '');
+            const ans = puzzle.answer; 
             const len = ans.length;
             
-            let inputChars = new Array(len).fill("");
+            // Initialize inputChars with spaces already in place so guess matches ans string properly
+            let inputChars = Array.from(ans, char => char === ' ' ? ' ' : '');
             let mistakes = 0;
             let hints = 0;
             let over = false;
@@ -1162,7 +1161,7 @@
                     });
                 } else if (gameId === 'logicRiddle') {
                     p.riddle = document.getElementById('f_r').value;
-                    p.answer = document.getElementById('f_a').value; // allow spaces
+                    p.answer = document.getElementById('f_a').value; 
                     p.date = document.getElementById('f_d').value;
                 } else if (gameId === 'progressiveImage') {
                     p.answer = document.getElementById('f_ans').value;
