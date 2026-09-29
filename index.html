@@ -19,10 +19,10 @@
         ::-webkit-scrollbar-thumb:hover { background: #52525b; }
         .game-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .game-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.15); }
-        .toast-enter { animation: slideInUp 0.3s forwards; }
+        .toast-enter { animation: slideInDown 0.3s forwards; }
         .toast-leave { animation: fadeOut 0.3s forwards; }
-        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(10px); } }
+        @keyframes slideInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
     </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black">
@@ -42,7 +42,7 @@
         </div>
     </header>
 
-    <div id="toast-container" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4"></div>
+    <div id="toast-container" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4"></div>
 
     <main id="app" class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6"></main>
 
@@ -52,24 +52,81 @@
 
     <script>
         const DEFAULT_DATA = {
-            connections: { title: "קשרים", puzzles: [{ id: 1, name: "חידה לדוגמה 1", groups: [{ category: "גבינות קשות", words: ["פרמזן", "קשקבל", "גרוייר", "פקורינו"] }, { category: "סוגי עננים", words: ["צירוס", "קומולוס", "סטרטוס", "נימבוס"] }, { category: "כלי נגינה", words: ["כינור", "ויולה", "צ'לו", "קונטרבס"] }, { category: "צבעי יסוד", words: ["אדום", "כחול", "צהוב", "ירוק"] }]}] },
-            chain: { title: "השרשרת", puzzles: [{ id: 1, start: "נע", end: "במבי", middle: [{ word: "הכבאי", explanation: "נע ודן, דן הכבאי" }, { word: "ונד", explanation: "סם הכבאי, סם ונד" }, { word: "עופר", explanation: "עופר לוי" }, { word: "בורקס", explanation: "סרטי בורקס" }]}] },
-            wordle: { title: "וורדל 6 אותיות", puzzles: [{ id: 1, word: "מחשבה", clue: "תהליך קוגניטיבי במוח" }, { id: 2, word: "משחקים", clue: "מה שאנחנו עושים עכשיו" }] },
-            questions20: { title: "20 שאלות + בונוס", puzzles: [{ id: 1, title: "השאלון הכללי", items: Array.from({length: 3}, (_, i) => ({ id: i + 1, q: `שאלה מס' ${i + 1}`, a: `תשובה ${i + 1}` }))}] },
-            logicRiddle: { title: "הגיונית", puzzles: [{ id: 1, riddle: "הם טסים והוא מממש את ייעודו", answer: "מטוס", date: "28.09.2026" }, { id: 2, riddle: "עיר בירה ללא ים", answer: "ירושלים", date: "29.09.2026" }] },
-            progressiveImage: { title: "מי אני?", puzzles: [{ id: 1, answer: "אלברט איינשטיין", steps: ["https://placehold.co/400x400/1e1e1e/eab308?text=1","https://placehold.co/400x400/27272a/eab308?text=2","https://placehold.co/400x400/3f3f46/eab308?text=3","https://placehold.co/400x400/52525b/eab308?text=4","https://placehold.co/400x400/71717a/eab308?text=5","https://placehold.co/400x400/a1a1aa/eab308?text=6"]}] }
+            connections: { 
+                title: "קשרים", 
+                puzzles: [{ 
+                    id: 1, 
+                    name: "חידה לדוגמה 1", 
+                    groups: [
+                        { category: "גבינות קשות", words: ["פרמזן", "קשקבל", "גרוייר", "פקורינו"] }, 
+                        { category: "סוגי עננים", words: ["צירוס", "קומולוס", "סטרטוס", "נימבוס"] }, 
+                        { category: "כלי נגינה", words: ["כינור", "ויולה", "צ'לו", "קונטרבס"] }, 
+                        { category: "צבעי יסוד", words: ["אדום", "כחול", "צהוב", "ירוק"] }
+                    ] 
+                }] 
+            },
+            chain: { 
+                title: "השרשרת", 
+                puzzles: [{ 
+                    id: 1, 
+                    name: "שרשרת ראשונה", 
+                    start: "נע", 
+                    end: "במבי", 
+                    middle: [
+                        { word: "הכבאי", explanation: "נע ודן, דן הכבאי" }, 
+                        { word: "ונד", explanation: "סם הכבאי, סם ונד" }, 
+                        { word: "עופר", explanation: "עופר לוי" }, 
+                        { word: "בורקס", explanation: "סרטי בורקס" }
+                    ],
+                    distractors: ["סמי", "סרט", "דיסני", "גבינה"] 
+                }] 
+            },
+            wordle: { 
+                title: "וורדל 6 אותיות", 
+                puzzles: [
+                    { id: 1, word: "מחשבה", clue: "תהליך קוגניטיבי במוח" }, 
+                    { id: 2, word: "משחקים", clue: "מה שאנחנו עושים עכשיו" }
+                ] 
+            },
+            questions20: { 
+                title: "20 שאלות + בונוס", 
+                puzzles: [{ 
+                    id: 1, 
+                    title: "השאלון הכללי", 
+                    items: [
+                        { q: "מהו ההר הגבוה ביותר בעולם?", a: "אוורסט" },
+                        { q: "באיזו שנה הוקמה מדינת ישראל?", a: "1948" },
+                        { q: "כמה ימים יש בשנה מעוברת?", a: "366" }
+                    ] 
+                }] 
+            },
+            logicRiddle: { 
+                title: "הגיונית", 
+                puzzles: [
+                    { id: 1, riddle: "הם טסים והוא מממש את ייעודו", answer: "מטוס", date: "28.09.2026" }, 
+                    { id: 2, riddle: "עיר בירה ללא ים", answer: "ירושלים", date: "29.09.2026" }
+                ] 
+            },
+            progressiveImage: { 
+                title: "מי אני?", 
+                puzzles: [{ 
+                    id: 1, 
+                    answer: "אלברט איינשטיין", 
+                    steps: Array(6).fill("https://placehold.co/400x400/1e1e1e/eab308?text=Step") 
+                }] 
+            }
         };
 
         function getAppData() {
             try {
-                const saved = localStorage.getItem('hebrew_game_portal_v2');
+                const saved = localStorage.getItem('hebrew_game_portal_v3');
                 if (saved) return JSON.parse(saved);
             } catch (e) {}
-            localStorage.setItem('hebrew_game_portal_v2', JSON.stringify(DEFAULT_DATA));
+            localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(DEFAULT_DATA));
             return DEFAULT_DATA;
         }
 
-        function saveAppData(data) { localStorage.setItem('hebrew_game_portal_v2', JSON.stringify(data)); }
+        function saveAppData(data) { localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(data)); }
 
         function showToast(msg, isError = false) {
             const container = document.getElementById('toast-container');
@@ -83,7 +140,6 @@
             }, 3000);
         }
 
-        // Downscale image and convert to base64 for localstorage
         async function fileToBase64(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -230,8 +286,6 @@
             window.con_clear = () => { selected = []; render(); };
             window.con_submit = () => {
                 if (selected.length !== 4) return showToast('יש לבחור 4 מילים בדיוק', true);
-                
-                // Check matches
                 let maxMatch = 0;
                 let matchedGroup = null;
                 puzzle.groups.forEach(g => {
@@ -257,71 +311,165 @@
 
         function initChain(container, puzzle, gameId, puzzleIndex, totalPuzzles) {
             let slots = new Array(puzzle.middle.length).fill(null);
-            let slotsColors = new Array(puzzle.middle.length).fill(''); // '' | 'green' | 'red'
-            let bank = puzzle.middle.map(m => m.word).sort(() => Math.random() - 0.5);
+            let slotsColors = new Array(puzzle.middle.length).fill('');
+            
+            let allSidelineWords = [...puzzle.middle.map(m => m.word), ...(puzzle.distractors || [])];
+            allSidelineWords.sort(() => Math.random() - 0.5);
+
             let attempts = 0;
             let isWon = false;
             let isChecking = false;
 
             function render() {
+                const midIdx = Math.ceil(allSidelineWords.length / 2);
+                const leftSide = allSidelineWords.slice(0, midIdx);
+                const rightSide = allSidelineWords.slice(midIdx);
+
                 container.innerHTML = `
-                    <div class="max-w-lg mx-auto space-y-6 py-4">
+                    <div class="max-w-xl mx-auto space-y-6 py-4">
                         <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
                             <button onclick="router.navigate('hub')" class="text-sm text-zinc-400">חזרה</button>
-                            <h2 class="text-xl font-bold text-white">השרשרת</h2>
+                            <h2 class="text-xl font-bold text-white">${puzzle.name || 'השרשרת'}</h2>
                             <div class="text-amber-400 font-bold text-sm">ניסיונות: ${attempts}/5</div>
                         </div>
 
-                        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col items-center space-y-3">
-                            <div class="w-20 h-20 rounded-full bg-white text-black font-extrabold flex items-center justify-center text-lg border-4 border-amber-500">${puzzle.start}</div>
-                            <div class="w-1 h-4 bg-zinc-700"></div>
+                        <div class="grid grid-cols-3 items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+                            <!-- Left Sideline -->
+                            <div class="flex flex-col gap-3 items-center min-h-[250px] justify-center transition-colors rounded-2xl p-2" ondragover="event.preventDefault()" ondrop="ch_drop(event, 'sideline')">
+                                ${leftSide.map(w => `
+                                    <div draggable="${!isChecking && !isWon}" 
+                                         ondragstart="ch_dragStart(event, '${w}', 'sideline')" 
+                                         onclick="!${isChecking} && !${isWon} && ch_quickPlace('${w}')" 
+                                         class="w-20 h-20 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center p-2 text-center shadow transition cursor-grab active:cursor-grabbing">
+                                        ${w}
+                                    </div>
+                                `).join('')}
+                            </div>
 
-                            ${slots.map((word, i) => {
-                                let bg = word ? 'bg-amber-500/20 border-amber-500 text-amber-100' : 'bg-zinc-800 border-zinc-700 text-zinc-500 border-dashed';
-                                if (slotsColors[i] === 'green') bg = 'bg-emerald-600 border-emerald-400 text-white';
-                                if (slotsColors[i] === 'red') bg = 'bg-red-600 border-red-400 text-white';
-                                return `
-                                <div onclick="!${isChecking} && ch_remove(${i})" class="w-20 h-20 rounded-full border-2 flex items-center justify-center font-bold text-sm cursor-pointer transition ${bg}">
-                                    ${word || `חוליה ${i+1}`}
-                                </div>
-                                <div class="w-1 h-4 bg-zinc-700"></div>
-                                `;
-                            }).join('')}
+                            <!-- Center Chain -->
+                            <div class="flex flex-col items-center space-y-2">
+                                <div class="w-16 h-16 rounded-full bg-white text-black font-extrabold flex items-center justify-center text-sm border-4 border-amber-500 shadow">${puzzle.start}</div>
+                                <div class="w-1 h-3 bg-zinc-700"></div>
 
-                            <div class="w-20 h-20 rounded-full bg-white text-black font-extrabold flex items-center justify-center text-lg border-4 border-amber-500">${puzzle.end}</div>
+                                ${slots.map((word, i) => {
+                                    let bg = word ? 'bg-amber-500/25 border-amber-500 text-amber-100' : 'bg-zinc-800/80 border-zinc-700 text-zinc-500 border-dashed';
+                                    if (slotsColors[i] === 'green') bg = 'bg-emerald-600 border-emerald-400 text-white';
+                                    if (slotsColors[i] === 'red') bg = 'bg-red-600 border-red-400 text-white';
+                                    if (isWon) bg = 'bg-emerald-600 border-emerald-400 text-white';
+                                    return `
+                                    <div draggable="${word && !isChecking && !isWon}" 
+                                         ondragstart="${word && !isWon ? `ch_dragStart(event, '${word}', 'slot', ${i})` : ''}" 
+                                         ondragover="event.preventDefault()" 
+                                         ondrop="ch_drop(event, 'slot', ${i})" 
+                                         onclick="!${isChecking} && !${isWon} && ch_remove(${i})" 
+                                         class="w-16 h-16 rounded-full border-2 flex items-center justify-center font-bold text-xs transition ${bg} p-1 text-center ${word && !isWon ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}">
+                                        ${word || `חוליה ${i+1}`}
+                                    </div>
+                                    <div class="w-1 h-3 bg-zinc-700"></div>
+                                    `;
+                                }).join('')}
+
+                                <div class="w-16 h-16 rounded-full bg-white text-black font-extrabold flex items-center justify-center text-sm border-4 border-amber-500 shadow">${puzzle.end}</div>
+                            </div>
+
+                            <!-- Right Sideline -->
+                            <div class="flex flex-col gap-3 items-center min-h-[250px] justify-center transition-colors rounded-2xl p-2" ondragover="event.preventDefault()" ondrop="ch_drop(event, 'sideline')">
+                                ${rightSide.map(w => `
+                                    <div draggable="${!isChecking && !isWon}" 
+                                         ondragstart="ch_dragStart(event, '${w}', 'sideline')" 
+                                         onclick="!${isChecking} && !${isWon} && ch_quickPlace('${w}')" 
+                                         class="w-20 h-20 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center p-2 text-center shadow transition cursor-grab active:cursor-grabbing">
+                                        ${w}
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
 
+                        <p class="text-center text-xs text-zinc-400">טיפ: ניתן לגרור חוליות או ללחוץ עליהן לשיבוץ מהיר!</p>
+
                         ${isWon ? `
-                            <div class="p-6 bg-emerald-900/40 border border-emerald-500 rounded-xl">
-                                <h3 class="text-xl font-bold text-emerald-400 text-center mb-3">הצלחת! הסברים:</h3>
+                            <div class="p-6 bg-emerald-900/40 border border-emerald-500 rounded-xl space-y-3">
+                                <h3 class="text-xl font-bold text-emerald-400 text-center">${attempts >= 5 ? 'נגמרו הניסיונות! הנה התשובה הנכונה:' : 'הצלחת! הסברים לשרשרת:'}</h3>
                                 <ul class="space-y-2 text-sm text-zinc-300">
                                     ${puzzle.middle.map((m, i) => `<li><strong class="text-white">${m.word}:</strong> ${m.explanation}</li>`).join('')}
                                 </ul>
                                 ${renderNextPuzzleButton(gameId, puzzleIndex, totalPuzzles)}
                             </div>
                         ` : `
-                            <div class="flex flex-wrap gap-2 justify-center">
-                                ${bank.map(w => `<button onclick="!${isChecking} && ch_add('${w}')" class="px-4 py-2 bg-indigo-600 rounded-full text-white font-bold text-sm hover:bg-indigo-500 transition">${w}</button>`).join('')}
-                            </div>
-                            <div class="flex gap-2 justify-center mt-4">
-                                <button onclick="!${isChecking} && ch_clear()" class="px-4 py-2 bg-zinc-800 text-white rounded-lg text-sm">ניקוי</button>
-                                <button onclick="!${isChecking} && ch_check()" class="px-6 py-2 bg-yellow-500 text-black font-bold rounded-lg text-sm">אישור</button>
+                            <div class="flex gap-3 justify-center">
+                                <button onclick="!${isChecking} && ch_clear()" class="px-6 py-2.5 bg-zinc-800 text-white rounded-xl text-sm font-semibold">ניקוי לוח</button>
+                                <button onclick="!${isChecking} && ch_check()" class="px-8 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm shadow">אישור</button>
                             </div>
                         `}
                     </div>
                 `;
             }
 
-            window.ch_add = (w) => {
+            window.ch_dragStart = (e, word, source, slotIndex = null) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ word, source, slotIndex }));
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            window.ch_drop = (e, targetType, targetSlotIdx = null) => {
+                e.preventDefault();
+                if (isChecking || isWon) return;
+                try {
+                    const rawData = e.dataTransfer.getData('text/plain');
+                    if (!rawData) return;
+                    const data = JSON.parse(rawData);
+                    const word = data.word;
+                    const source = data.source;
+                    const prevSlotIdx = data.slotIndex;
+
+                    // Remove from origin
+                    if (source === 'slot' && prevSlotIdx !== null) {
+                        slots[prevSlotIdx] = null;
+                    } else if (source === 'sideline') {
+                        allSidelineWords = allSidelineWords.filter(x => x !== word);
+                    }
+
+                    // Place to target
+                    if (targetType === 'slot' && targetSlotIdx !== null) {
+                        if (slots[targetSlotIdx]) {
+                            allSidelineWords.push(slots[targetSlotIdx]); // return old word to sideline
+                        }
+                        slots[targetSlotIdx] = word;
+                    } else if (targetType === 'sideline') {
+                        allSidelineWords.push(word);
+                    }
+
+                    render();
+                } catch (err) {}
+            };
+
+            window.ch_quickPlace = (w) => {
+                if (isWon) return;
                 const idx = slots.indexOf(null);
-                if (idx > -1) { slots[idx] = w; bank = bank.filter(x => x !== w); render(); }
+                if (idx > -1) { 
+                    slots[idx] = w; 
+                    allSidelineWords = allSidelineWords.filter(x => x !== w); 
+                    render(); 
+                }
             };
+
             window.ch_remove = (idx) => {
-                if (slots[idx]) { bank.push(slots[idx]); slots[idx] = null; render(); }
+                if (isWon) return;
+                if (slots[idx]) { 
+                    allSidelineWords.push(slots[idx]); 
+                    slots[idx] = null; 
+                    render(); 
+                }
             };
-            window.ch_clear = () => { bank.push(...slots.filter(Boolean)); slots.fill(null); render(); };
+
+            window.ch_clear = () => { 
+                if (isWon) return;
+                allSidelineWords.push(...slots.filter(Boolean)); 
+                slots.fill(null); 
+                render(); 
+            };
+
             window.ch_check = () => {
-                if (slots.includes(null)) return showToast('מלא את כל החוליות', true);
+                if (slots.includes(null)) return showToast('מלא את כל החוליות בשרשרת', true);
                 attempts++;
                 isChecking = true;
                 let correctCount = 0;
@@ -336,12 +484,13 @@
                     if (correctCount === puzzle.middle.length) {
                         isWon = true;
                     } else if (attempts >= 5) {
-                        showToast('נגמרו הניסיונות!', true);
-                        ch_clear(); attempts = 0;
+                        showToast('נגמרו הניסיונות! הנה התשובה הנכונה', true);
+                        slots = puzzle.middle.map(m => m.word);
+                        allSidelineWords = [];
+                        isWon = true;
                     } else {
-                        // Return red ones to bank
                         slots.forEach((w, i) => {
-                            if (slotsColors[i] === 'red') { bank.push(w); slots[i] = null; }
+                            if (slotsColors[i] === 'red') { allSidelineWords.push(w); slots[i] = null; }
                         });
                         showToast('חלק מהחוליות שגויות', true);
                     }
@@ -362,7 +511,7 @@
             
             const finalMap = { 'כ': 'ך', 'מ': 'ם', 'נ': 'ן', 'פ': 'ף', 'צ': 'ץ' };
             const baseMap = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
-            const kbRows = [['ק','ר','א','ט','ו','פ'], ['ש','ד','ג','כ','ע','י','ח','ל'], ['ז','ס','ב','ה','נ','מ','צ','ת']];
+            const kbRows = [['פ','ו','ט','א','ר','ק'], ['ל','ח','י','ע','כ','ג','ד','ש'], ['ת','צ','מ','נ','ה','ב','ס','ז']];
 
             function render() {
                 container.innerHTML = `
@@ -373,13 +522,11 @@
                             <div class="text-amber-400 text-xs">${puzzle.clue}</div>
                         </div>
 
-                        <div class="grid grid-rows-6 gap-2 w-max mx-auto" dir="ltr">
+                        <div class="grid grid-rows-6 gap-2 w-max mx-auto" dir="rtl">
                             ${Array.from({length: 6}, (_, r) => {
                                 const g = guesses[r] || (r === guesses.length && !over ? current : "");
                                 return `<div class="grid grid-cols-6 gap-2">
                                     ${Array.from({length: 6}, (_, c) => {
-                                        // DOM builds left to right in ltr, so we must reverse text logic for RTL display.
-                                        // Wait, the container is RTL. Let's keep dir="rtl" on parent, so index 0 is visually rightmost.
                                         let char = g[c] || "";
                                         if (c === 5 && char && finalMap[char]) char = finalMap[char];
                                         let bg = "bg-zinc-900 border-zinc-700 text-white";
@@ -402,7 +549,7 @@
                                 ${renderNextPuzzleButton(gameId, puzzleIndex, totalPuzzles)}
                             </div>
                         ` : `
-                            <div class="space-y-2 pt-4" dir="rtl">
+                            <div class="space-y-2 pt-4">
                                 ${kbRows.map(row => `
                                     <div class="flex justify-center gap-1 sm:gap-2">
                                         ${row.map(k => `<button onclick="w_key('${k}')" class="px-3 sm:px-4 py-3 bg-zinc-800 text-white font-bold rounded-lg text-lg shadow active:bg-zinc-600 active:scale-95 transition">${k}</button>`).join('')}
@@ -487,7 +634,7 @@
             let hints = 0;
             let over = false;
             let won = false;
-            const kbRows = [['ק','ר','א','ט','ו','פ'], ['ש','ד','ג','כ','ע','י','ח','ל'], ['ז','ס','ב','ה','נ','מ','צ','ת']];
+            const kbRows = [['פ','ו','ט','א','ר','ק'], ['ל','ח','י','ע','כ','ג','ד','ש'], ['ת','צ','מ','נ','ה','ב','ס','ז']];
 
             function render() {
                 container.innerHTML = `
@@ -515,7 +662,7 @@
                                 <button onclick="r_hint()" class="px-4 py-2 bg-indigo-900/50 text-indigo-300 rounded-lg text-sm border border-indigo-500/30">רמז (${2-hints})</button>
                                 <button onclick="r_check()" class="px-6 py-2 bg-yellow-500 text-black font-bold rounded-lg text-sm shadow">אישור ניחוש</button>
                             </div>
-                            <div class="space-y-2 pt-2" dir="rtl">
+                            <div class="space-y-2 pt-2">
                                 ${kbRows.map(row => `
                                     <div class="flex justify-center gap-1 sm:gap-2">
                                         ${row.map(k => `<button onclick="r_key('${k}')" class="px-3 sm:px-4 py-3 bg-zinc-800 text-white font-bold rounded-lg text-lg shadow active:bg-zinc-600 transition">${k}</button>`).join('')}
@@ -555,7 +702,6 @@
                     if (mistakes >= 3) { over = true; won = false; }
                     else {
                         for(let i=0; i<len; i++) {
-                            // keep correct, keep hints, expunge wrong
                             if(input[i] !== ans[i]) input[i] = ""; 
                         }
                         showToast('טעות! אותיות שגויות נמחקו', true);
@@ -589,8 +735,7 @@
                             ${over ? `
                                 <div class="w-full text-center space-y-4">
                                     <h3 class="text-2xl font-bold ${won ? 'text-emerald-400' : 'text-red-400'}">${won ? 'כל הכבוד!' : 'המשחק נגמר'}</h3>
-                                    <p class="text-white text-lg">התשובה: ${puzzle.answer}</p>
-                                    ${renderNextPuzzleButton(gameId, puzzleIndex, totalPuzzles)}
+                                    <p class="text-white text-lg">התשובה: ${puzzle.answer}</p>${renderNextPuzzleButton(gameId, puzzleIndex, totalPuzzles)}
                                 </div>
                             ` : `
                                 <button onclick="p_next()" class="w-full py-3 bg-amber-500 text-black font-bold rounded-xl mb-4 shadow">🔍 לתמונה ברורה יותר</button>
@@ -640,8 +785,8 @@
                             <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
                                 <div><h4 class="font-bold text-white">חידה #${idx + 1}</h4><p class="text-xs text-zinc-500">${p.name || p.answer || p.word || p.title || p.riddle || ''}</p></div>
                                 <div class="flex gap-2">
-                                    <button onclick="router.navigate('adminForm', {gameId: '${gameId}', puzzleIndex: ${idx}})" class="px-4 py-2 bg-zinc-800 text-white rounded-lg text-sm">עריכה</button>
-                                    <button onclick="adm_del('${gameId}', ${idx})" class="px-4 py-2 bg-red-900/40 text-red-300 rounded-lg text-sm">מחיקה</button>
+                                    <button onclick="router.navigate('adminForm', {gameId: '${gameId}', puzzleIndex:${idx}})" class="px-4 py-2 bg-zinc-800 text-white rounded-lg text-sm">עריכה</button>
+                                    <button onclick="adm_del('${gameId}',${idx})" class="px-4 py-2 bg-red-900/40 text-red-300 rounded-lg text-sm">מחיקה</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -661,15 +806,14 @@
         function renderAdminForm(container, gameId, puzzleIndex) {
             const data = getAppData();
             const isNew = puzzleIndex === -1;
-            let p = isNew ? {} : JSON.parse(JSON.stringify(data[gameId].puzzles[puzzleIndex])); // Deep copy
+            let p = isNew ? {} : JSON.parse(JSON.stringify(data[gameId].puzzles[puzzleIndex]));
 
-            // Setup default struct based on game type
             if (isNew) {
                 p.id = Date.now();
                 if (gameId === 'connections') p = { ...p, name: "חידה חדשה", groups: Array(4).fill({category: "", words: ["","","",""]}) };
-                if (gameId === 'chain') p = { ...p, start: "", end: "", middle: [{word: "", explanation: ""}] };
+                if (gameId === 'chain') p = { ...p, name: "שרשרת חדשה", start: "", end: "", middle: [{word: "", explanation: ""}], distractors: [""] };
                 if (gameId === 'wordle') p = { ...p, word: "", clue: "" };
-                if (gameId === 'questions20') p = { ...p, title: "שאלון", items: [{q: "", a: ""}] };
+                if (gameId === 'questions20') p = { ...p, title: "שאלון חדש", items: [{q: "", a: ""}] };
                 if (gameId === 'logicRiddle') p = { ...p, riddle: "", answer: "", date: "" };
                 if (gameId === 'progressiveImage') p = { ...p, answer: "", steps: Array(6).fill("") };
             }
@@ -678,7 +822,7 @@
 
             if (gameId === 'connections') {
                 formHtml = `
-                    <input type="text" id="f_name" value="${p.name}" class="w-full p-2 bg-zinc-800 text-white rounded" placeholder="שם החידה">
+                    <input type="text" id="f_name" value="${p.name || ''}" class="w-full p-2 bg-zinc-800 text-white rounded mb-4" placeholder="שם החידה">
                     ${p.groups.map((g, i) => `
                         <div class="border border-zinc-700 p-4 rounded-xl space-y-2 mt-4 bg-zinc-900/50">
                             <label class="text-sm font-bold text-amber-400">קבוצה ${i+1}</label>
@@ -689,12 +833,49 @@
                         </div>
                     `).join('')}
                 `;
+            } else if (gameId === 'chain') {
+                formHtml = `
+                    <input type="text" id="f_c_name" value="${p.name || ''}" class="w-full p-2 bg-zinc-800 text-white rounded mb-4" placeholder="שם השרשרת">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div><label class="text-xs">מילת התחלה</label><input type="text" id="f_c_start" value="${p.start || ''}" class="w-full p-2 bg-zinc-800 text-white rounded"></div>
+                        <div><label class="text-xs">מילת סיום</label><input type="text" id="f_c_end" value="${p.end || ''}" class="w-full p-2 bg-zinc-800 text-white rounded"></div>
+                    </div>
+                    <label class="font-bold text-amber-400 block mb-2">חוליות נכונות בסדר עולה:</label>
+                    <div id="chain-middle-container" class="space-y-3">
+                        ${p.middle.map((m, i) => `
+                            <div class="flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700">
+                                <input type="text" placeholder="מילה" class="f_m_word w-1/3 p-2 bg-zinc-800 text-white rounded" value="${m.word}">
+                                <input type="text" placeholder="הסבר" class="f_m_exp flex-1 p-2 bg-zinc-800 text-white rounded" value="${m.explanation}">
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" onclick="addChainMiddleField()" class="mt-2 px-3 py-1 bg-zinc-800 text-xs rounded text-amber-400">+ הוסף חוליה</button>
+                    
+                    <div class="mt-6">
+                        <label class="font-bold text-amber-400 block mb-2">מסיחים (מילים שגויות לצדדים):</label>
+                        <input type="text" id="f_c_distractors" value="${(p.distractors || []).join(', ')}" class="w-full p-2 bg-zinc-800 text-white rounded" placeholder="הפרד בפסיקים, למשל: סמי, סרט">
+                    </div>
+                `;
             } else if (gameId === 'wordle') {
                 formHtml = `
                     <label class="block text-sm font-bold mb-1">מילה (6 אותיות)</label>
                     <input type="text" id="f_w" value="${p.word}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4" placeholder="דוגמה: מחשבה">
                     <label class="block text-sm font-bold mb-1">רמז</label>
                     <input type="text" id="f_c" value="${p.clue}" class="w-full p-3 bg-zinc-800 text-white rounded" placeholder="רמז למילה">
+                `;
+            } else if (gameId === 'questions20') {
+                formHtml = `
+                    <input type="text" id="f_20_title" value="${p.title || ''}" class="w-full p-2 bg-zinc-800 text-white rounded mb-4" placeholder="כותרת השאלון">
+                    <div id="questions-items-container" class="space-y-3">
+                        ${(p.items || []).map((item, i) => `
+                            <div class="flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700">
+                                <span class="font-bold text-xs">${i+1}</span>
+                                <input type="text" placeholder="שאלה" class="q_item_q flex-1 p-2 bg-zinc-800 text-white rounded" value="${item.q}">
+                                <input type="text" placeholder="תשובה" class="q_item_a w-1/3 p-2 bg-zinc-800 text-white rounded" value="${item.a}">
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" onclick="add20QuestionField()" class="mt-2 px-3 py-1 bg-zinc-800 text-xs rounded text-amber-400">+ הוסף שאלה</button>
                 `;
             } else if (gameId === 'logicRiddle') {
                 formHtml = `
@@ -705,23 +886,17 @@
                     <label class="block text-sm font-bold mb-1">תאריך/כותרת משנה</label>
                     <input type="text" id="f_d" value="${p.date}" class="w-full p-3 bg-zinc-800 text-white rounded">
                 `;
-            } else if (gameId === 'chain' || gameId === 'questions20') {
-                // Using JSON stringify fallback in textarea for dynamic array forms to keep file size manageable,
-                // but let's build proper dynamic UI for Chain at least.
-                // For brevity in single file, basic textareas for JSON arrays, OR specific fields. Let's do specific fields for Chain.
-                formHtml = `<div class="text-yellow-500 font-bold mb-2">עבור רשימות דינמיות - אנא ערוך בזהירות:</div>
-                <textarea id="f_json" class="w-full h-64 p-3 bg-zinc-800 text-white text-left font-mono rounded" dir="ltr">${JSON.stringify(p, null, 2)}</textarea>`;
             } else if (gameId === 'progressiveImage') {
                 formHtml = `
                     <label class="block text-sm font-bold mb-1">התשובה (מי הדמות?)</label>
                     <input type="text" id="f_ans" value="${p.answer}" class="w-full p-3 bg-zinc-800 text-white rounded mb-4">
-                    <p class="text-sm text-zinc-400 mb-2">בחר תמונות (הן יעברו כיווץ וישמרו מקומית). מומלץ להכין 6 תמונות מתבהרות.</p>
+                    <p class="text-sm text-zinc-400 mb-2">העלה 6 רזולוציות מדורגות (החל מראשונית ומטושטשת ועד למקורית).</p>
                     <div class="space-y-3" id="img-uploads-container">
                         ${Array.from({length: 6}, (_, i) => `
                             <div class="flex items-center gap-4 bg-zinc-900 p-3 rounded-lg border border-zinc-700">
                                 <div class="font-bold w-16 text-center">שלב ${i+1}</div>
                                 <input type="file" accept="image/*" onchange="handleImgFile(this, ${i})" class="text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-white">
-                                <img id="preview_${i}" src="${p.steps && p.steps[i] ? p.steps[i] : ''}" class="w-10 h-10 object-cover rounded bg-zinc-950 hidden sm:block">
+                                <img id="preview_${i}" src="${p.steps && p.steps[i] ? p.steps[i] : ''}" class="w-10 h-10 object-cover rounded bg-zinc-950 ${p.steps && p.steps[i] ? '' : 'hidden'}">
                                 <input type="hidden" id="f_img_${i}" value="${p.steps && p.steps[i] ? p.steps[i] : ''}">
                             </div>
                         `).join('')}
@@ -741,15 +916,24 @@
                     </div>
                 </div>
             `;
-            
-            // Re-show images if they exist
-            if (gameId === 'progressiveImage') {
-                for(let i=0; i<6; i++) {
-                    const imgEl = document.getElementById(`preview_${i}`);
-                    if(imgEl && imgEl.src && !imgEl.src.endsWith(window.location.pathname)) imgEl.classList.remove('hidden');
-                }
-            }
         }
+
+        window.addChainMiddleField = () => {
+            const container = document.getElementById('chain-middle-container');
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700";
+            div.innerHTML = `<input type="text" placeholder="מילה" class="f_m_word w-1/3 p-2 bg-zinc-800 text-white rounded"><input type="text" placeholder="הסבר" class="f_m_exp flex-1 p-2 bg-zinc-800 text-white rounded">`;
+            container.appendChild(div);
+        };
+
+        window.add20QuestionField = () => {
+            const container = document.getElementById('questions-items-container');
+            const count = container.children.length + 1;
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center bg-zinc-900 p-3 rounded-xl border border-zinc-700";
+            div.innerHTML = `<span class="font-bold text-xs">${count}</span><input type="text" placeholder="שאלה" class="q_item_q flex-1 p-2 bg-zinc-800 text-white rounded"><input type="text" placeholder="תשובה" class="q_item_a w-1/3 p-2 bg-zinc-800 text-white rounded">`;
+            container.appendChild(div);
+        };
 
         window.handleImgFile = async (input, index) => {
             const file = input.files[0];
@@ -777,17 +961,34 @@
                         for(let wi=0; wi<4; wi++) words.push(document.getElementById(`f_w_${i}_${wi}`).value.trim());
                         p.groups.push({ category: cat, words: words });
                     }
+                } else if (gameId === 'chain') {
+                    p.name = document.getElementById('f_c_name').value || "שרשרת";
+                    p.start = document.getElementById('f_c_start').value.trim();
+                    p.end = document.getElementById('f_c_end').value.trim();
+                    p.middle = [];
+                    document.querySelectorAll('#chain-middle-container > div').forEach(row => {
+                        const word = row.querySelector('.f_m_word').value.trim();
+                        const explanation = row.querySelector('.f_m_exp').value.trim();
+                        if(word) p.middle.push({ word, explanation });
+                    });
+                    const distStr = document.getElementById('f_c_distractors').value;
+                    p.distractors = distStr ? distStr.split(',').map(s => s.trim()).filter(Boolean) : [];
                 } else if (gameId === 'wordle') {
                     p.word = document.getElementById('f_w').value.trim();
                     p.clue = document.getElementById('f_c').value.trim();
                     if(p.word.length !== 6) return showToast('שגיאה: המילה חייבת להיות 6 אותיות!', true);
+                } else if (gameId === 'questions20') {
+                    p.title = document.getElementById('f_20_title').value || "שאלון";
+                    p.items = [];
+                    document.querySelectorAll('#questions-items-container > div').forEach(row => {
+                        const q = row.querySelector('.q_item_q').value.trim();
+                        const a = row.querySelector('.q_item_a').value.trim();
+                        if(q && a) p.items.push({ q, a });
+                    });
                 } else if (gameId === 'logicRiddle') {
                     p.riddle = document.getElementById('f_r').value;
                     p.answer = document.getElementById('f_a').value.trim();
                     p.date = document.getElementById('f_d').value;
-                } else if (gameId === 'chain' || gameId === 'questions20') {
-                    const jsonVal = document.getElementById('f_json').value;
-                    p = JSON.parse(jsonVal);
                 } else if (gameId === 'progressiveImage') {
                     p.answer = document.getElementById('f_ans').value;
                     p.steps = [];
