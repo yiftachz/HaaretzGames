@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פורטל המשחקים העברי</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Heebo & Assistant -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Assistant', 'Heebo', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #52525b;
+        }
+        .game-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.15);
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black">
+
+    <header class="border-b border-zinc-800 bg-zinc-900/90 backdrop-blur sticky top-0 z-50 px-4 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="router.navigate('hub')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 to-amber-400 flex items-center justify-center font-black text-black text-xl shadow-lg">
+                    פ
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl text-white tracking-wide">פורטל החידות והמשחקים</h1>
+                    <p class="text-xs text-zinc-400">אתגר היומיום בסגנון הארץ / NYT</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="router.navigate('hub')" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold text-zinc-200 transition">
+                    ראשי
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main id="app" class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6">
+        <!-- Rendered dynamically by JavaScript router -->
+    </main>
+
+    <footer class="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500 bg-zinc-950 mt-auto">
+        <p>פורטל משחקים עברי מתקדם • כל הזכויות שמורות לשחקנים</p>
+    </footer>
+
+    <script>
+        const DEFAULT_DATA = {
+            connections: {
+                title: "קשרים",
+                puzzles: [
+                    {
+                        id: 1,
+                        name: "גבינות קשות",
+                        groups: [
+                            { category: "גבינות קשות", words: ["פרמזן", "קשקבל", "גרוייר", "פקורינו"] },
+                            { category: "סוגי עננים", words: ["צירוס", "קומולוס", "סטרטוס", "נימבוס"] },
+                            { category: "כלי נגינה קשת", words: ["כינור", "ויולה", "צ'ello", "קונטרבס"] },
+                            { category: "צבעי יסוד (אמנות)", words: ["אדום", "כחול", "צהוב", "ירוק"] }
+                        ]
+                    }
+                ]
+            },
+            chain: {
+                title: "השרשרת",
+                puzzles: [
+                    {
+                        id: 1,
+                        start: "נע",
+                        end: "במבי",
+                        middle: [
+                            { word: "הכבאי", explanation: "נע ודן - חברים בסדרה; דן הכבאי" },
+                            { word: "ונד", explanation: "הכבאי סם; סם ונד? סם וולקוט... או סם הפוך" },
+                            { word: "עופר", explanation: "עופר לוי, עופר שכטר..." },
+                            { word: "בורקס", explanation: "סרטי בורקס, עופר לוי..." }
+                        ]
+                    }
+                ]
+            },
+            wordle: {
+                title: "וורדל 6 אותיות",
+                puzzles: [
+                    { id: 1, word: "מחשבה", clue: "תהליך קוגניטיבי עמוק במוח" }
+                ]
+            },
+            questions20: {
+                title: "20 שאלות + בונוס",
+                puzzles: [
+                    {
+                        id: 1,
+                        title: "השאלון המרכזי",
+                        items: Array.from({length: 21}, (_, i) => ({
+                            id: i + 1,
+                            q: i === 20 ? "שאלת בונוס מיוחדת: מה המצאת המאה?" : `שאלה מס' ${i + 1}: איזה אירוע היסטורי התרחש בשנת ${1900 + i}?`,
+                            a: `תשובה לשאלה ${i + 1}: אירוע משמעותי מאוד בתחום התרבות או הטכנולוגיה.`
+                        }))
+                    }
+                ]
+            },
+            logicRiddle: {
+                title: "הגיونية",
+                puzzles: [
+                    { id: 1, riddle: "הם טסים והוא מממש את ייעודו", answer: "מטוס", date: "28.09.2026" }
+                ]
+            },
+            progressiveImage: {
+                title: "מי אני?",
+                puzzles: [
+                    {
+                        id: 1,
+                        answer: "אלברט איינשטיין",
+                        steps: [
+                            "https://placehold.co/400x400/1e1e1e/eab308?text=Step+1+(Very+Blurry)",
+                            "https://placehold.co/400x400/27272a/eab308?text=Step+2+(Blurry)",
+                            "https://placehold.co/400x400/3f3f46/eab308?text=Step+3+(Medium)",
+                            "https://placehold.co/400x400/52525b/eab308?text=Step+4+(Clearer)",
+                            "https://placehold.co/400x400/71717a/eab308?text=Step+5+(Almost+Clear)",
+                            "https://placehold.co/400x400/a1a1aa/eab308?text=Step+6+(High+Res)"
+                        ]
+                    }
+                ]
+            }
+        };
+
+        // Load data from LocalStorage or initialize with defaults
+        function getAppData() {
+            const saved = localStorage.getItem('hebrew_game_portal_data');
+            if (!saved) {
+                localStorage.setItem('hebrew_game_portal_data', JSON.stringify(DEFAULT_DATA));
+                return DEFAULT_DATA;
+            }
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                return DEFAULT_DATA;
+            }
+        }
+
+        function saveAppData(data) {
+            localStorage.setItem('hebrew_game_portal_data', JSON.stringify(data));
+        }
+
+        const router = {
+            navigate: function(route, params = {}) {
+                window.scrollTo(0, 0);
+                const app = document.getElementById('app');
+                app.innerHTML = '';
+                
+                if (route === 'hub') {
+                    renderHub(app);
+                } else if (route === 'game') {
+                    renderGame(app, params.gameId, params.puzzleIndex || 0);
+                } else if (route === 'admin') {
+                    renderAdmin(app, params.gameId);
+                }
+            }
+        };
+
+        function renderHub(container) {
+            const data = getAppData();
+            const gamesList = [
+                { id: 'connections', title: 'קשרים (Connections)', desc: 'מצאו 4 קבוצות של 4 מילים קשורות', icon: '🧩', color: 'from-amber-500/20 to-yellow-500/10', border: 'border-amber-500/30' },
+                { id: 'chain', title: 'השרשרת (Chain)', desc: 'סדרו את חוליות הביניים בסדר הגיוני מושלם', icon: '🔗', color: 'from-blue-500/20 to-indigo-500/10', border: 'border-blue-500/30' },
+                { id: 'wordle', title: 'וורדל 6 אותיות', desc: 'נחשו את המילה בת 6 האותיות עם משוב חכם', icon: '🔤', color: 'from-emerald-500/20 to-teal-500/10', border: 'border-emerald-500/30' },
+                { id: 'questions20', title: '20 שאלות + בונוס', desc: 'שאלון מדורג עם מעקב הצלחה V/X וסיכום', icon: '❓', color: 'from-purple-500/20 to-pink-500/10', border: 'border-purple-500/30' },
+                { id: 'logicRiddle', title: 'הגיونية (Logic Riddle)', desc: 'פתרו את חידת ההגיון עם מקלדת עברית מותאמת', icon: '💡', color: 'from-orange-500/20 to-amber-500/10', border: 'border-orange-500/30' },
+                { id: 'progressiveImage', title: 'מי אני? (Progressive Image)', desc: 'זהו את הדמות לפי רזולוציות מתקדמות', icon: '👤', color: 'from-rose-500/20 to-red-500/10', border: 'border-rose-500/30' },
+            ];
+
+            container.innerHTML = `
+                <div class="space-y-8 py-4">
+                    <div class="text-center space-y-3 max-w-2xl mx-auto">
+                        <h2 class="text-3xl sm:text-4xl font-black text-white tracking-tight">בחר משחק והתחל לאתגר את המוח</h2>
+                        <p class="text-zinc-400 text-sm sm:text-base">אסופת משחקי חשיבה בעברית בסגנון היומי המוביל. שחקו, אתגרו חברים, או היכנסו למסך הניהול כדי להוסיף חידות משלכם!</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${gamesList.map(g => `
+                            <div class="game-card bg-zinc-900 border ${g.border} rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden bg-gradient-to-br ${g.color}">
+                                <div>
+                                    <div class="text-4xl mb-4">${g.icon}</div>
+                                    <h3 class="text-xl font-bold text-white mb-2">${g.title}</h3>
+                                    <p class="text-zinc-400 text-sm mb-6">${g.desc}</p>
+                                </div>
+                                <div class="flex items-center gap-3 pt-4 border-t border-zinc-800/80">
+                                    <button onclick="router.navigate('game', {gameId: '${g.id}'})" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 px-4 rounded-xl text-sm transition shadow-lg text-center">
+                                        שחק כעת
+                                    </button>
+                                    <button onclick="router.navigate('admin', {gameId: '${g.id}'})" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold py-2.5 px-3 rounded-xl text-sm transition" title="ניהול ועריכת חידות">
+                                        ⚙️
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderGame(container, gameId, puzzleIndex) {
+            const data = getAppData();
+            const gameData = data[gameId];
+            if (!gameData || !gameData.puzzles || gameData.puzzles.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 space-y-4">
+                        <h3 class="text-2xl font-bold text-white">אין חידות זמינות במשחק זה</h3>
+                        <p class="text-zinc-400">השתמש במסך הניהול כדי להוסיף חידות חדשות.</p>
+                        <button onclick="router.navigate('hub')" class="px-6 py-2 bg-yellow-500 text-black font-bold rounded-xl">חזרה לראשי</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const puzzle = gameData.puzzles[puzzleIndex] || gameData.puzzles[0];
+
+            // Render specific game engine
+            if (gameId === 'connections') initConnectionsGame(container, puzzle, gameId, puzzleIndex);
+            else if (gameId === 'chain') initChainGame(container, puzzle, gameId, puzzleIndex);
+            else if (gameId === 'wordle') initWordleGame(container, puzzle, gameId, puzzleIndex);
+            else if (gameId === 'questions20') init20QuestionsGame(container, puzzle, gameId, puzzleIndex);
+            else if (gameId === 'logicRiddle') initLogicRiddleGame(container, puzzle, gameId, puzzleIndex);
+            else if (gameId === 'progressiveImage') initProgressiveImageGame(container, puzzle, gameId, puzzleIndex);
+        }
+
+        function initConnectionsGame(container, puzzle, gameId, puzzleIndex) {
+            // Flatten and shuffle words
+            let allWords = [];
+            puzzle.groups.forEach((g, gIdx) => {
+                g.words.forEach(w => allWords.push({ text: w, groupIdx: gIdx }));
+            });
+            allWords.sort(() => Math.random() - 0.5);
+
+            let selectedWords = [];
+            let solvedGroups = [];
+            let mistakes = 4;
+
+            function render() {
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto space-y-6 py-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                            <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                            <h2 class="text-xl font-black text-white">קשרים (Connections)</h2>
+                            <div class="text-sm font-bold text-amber-400">טעויות שנותרו: ${mistakes}</div>
+                        </div>
+
+                        <!-- Solved Groups -->
+                        <div id="solved-container" class="space-y-3">
+                            ${solvedGroups.map(sg => `
+                                <div class="p-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-center space-y-1">
+                                    <div class="font-bold text-amber-300">${sg.category}</div>
+                                    <div class="text-sm text-zinc-200">${sg.words.join(', ')}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        ${solvedGroups.length === puzzle.groups.length ? `
+                            <div class="p-6 bg-zinc-900 border border-emerald-500/50 rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold text-emerald-400">כל הכבוד! פתרת את כל הקשרים!</h3>
+                                <button onclick="router.navigate('hub')" class="px-6 py-3 bg-emerald-500 text-black font-bold rounded-xl">חזרה לתפריט</button>
+                            </div>
+                        ` : mistakes <= 0 ? `
+                            <div class="p-6 bg-zinc-900 border border-red-500/50 rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold text-red-400">נגמרו הנסיונות! נסה שוב.</h3>
+                                <button onclick="router.navigate('game', {gameId: '${gameId}', puzzleIndex: ${puzzleIndex}})" class="px-6 py-3 bg-red-500 text-white font-bold rounded-xl">נסה שוב</button>
+                            </div>
+                        ` : `
+                            <!-- Grid of Words -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                ${allWords.map((w, idx) => `
+                                    <button onclick="toggleWord('${w.text}')" id="word-btn-${idx}" class="p-4 rounded-xl font-bold text-sm sm:text-base transition text-center border ${selectedWords.includes(w.text) ? 'bg-amber-500 text-black border-amber-400 shadow-lg scale-95' : 'bg-zinc-900 text-zinc-200 border-zinc-800 hover:border-zinc-700'}">
+                                        ${w.text}
+                                    </button>
+                                `).join('')}
+                            </div>
+
+                            <div class="flex gap-3 justify-center pt-4">
+                                <button onclick="shuffleWords()" class="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-sm transition">ערבוב מחדש</button>
+                                <button onclick="deselectAll()" class="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-sm transition">ניקוי בחירה</button>
+                                <button onclick="submitSelection()" class="px-6 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-sm transition shadow-lg">אישור ניחוש</button>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            window.toggleWord = (word) => {
+                if (selectedWords.includes(word)) {
+                    selectedWords = selectedWords.filter(w => w !== word);
+                } else {
+                    if (selectedWords.length < 4) selectedWords.push(word);
+                }
+                render();
+            };
+
+            window.shuffleWords = () => {
+                allWords.sort(() => Math.random() - 0.5);
+                render();
+            };
+
+            window.deselectAll = () => {
+                selectedWords = [];
+                render();
+            };
+
+            window.submitSelection = () => {
+                if (selectedWords.length !== 4) return;
+                // Check if selected words belong to the same group
+                let matchedGroup = null;
+                for (let g of puzzle.groups) {
+                    if (selectedWords.every(sw => g.words.includes(sw))) {
+                        matchedGroup = g;
+                        break;
+                    }
+                }
+
+                if (matchedGroup) {
+                    solvedGroups.push(matchedGroup);
+                    allWords = allWords.filter(w => !matchedGroup.words.includes(w.text));
+                    selectedWords = [];
+                } else {
+                    mistakes--;
+                }
+                render();
+            };
+
+            render();
+        }
+
+        function initChainGame(container, puzzle, gameId, puzzleIndex) {
+            let intermediateSlots = new Array(puzzle.middle.length).fill(null);
+            let availableWords = puzzle.middle.map(m => m.word).sort(() => Math.random() - 0.5);
+            let attempts = 0;
+            let isSolved = false;
+
+            function render() {
+                container.innerHTML = `
+                    <div class="max-w-lg mx-auto space-y-6 py-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                            <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                            <h2 class="text-xl font-black text-white">השרשרת (Chain)</h2>
+                            <div class="text-sm font-bold text-amber-400">ניסיונות: ${attempts}/5</div>
+                        </div>
+
+                        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col items-center space-y-4 relative">
+                            <!-- Start Fixed Link -->
+                            <div class="w-24 h-24 rounded-full bg-white text-black font-extrabold flex items-center justify-center text-lg shadow-xl border-4 border-amber-500">
+                                ${puzzle.start}
+                            </div>
+                            <div class="w-1 h-6 bg-zinc-700"></div>
+
+                            <!-- Intermediate Slots -->
+                            ${intermediateSlots.map((slotWord, idx) => `
+                                <div onclick="handleSlotClick(${idx})" class="w-24 h-24 rounded-full border-2 border-dashed ${slotWord ? 'border-amber-500 bg-amber-500/10 text-white' : 'border-zinc-700 bg-zinc-800/50 text-zinc-500'} flex items-center justify-center font-bold text-sm cursor-pointer transition shadow-inner">
+                                    ${slotWord || `חוליה ${idx + 1}`}
+                                </div>
+                                <div class="w-1 h-6 bg-zinc-700"></div>
+                            `).join('')}
+
+                            <!-- End Fixed Link -->
+                            <div class="w-24 h-24 rounded-full bg-white text-black font-extrabold flex items-center justify-center text-lg shadow-xl border-4 border-amber-500">
+                                ${puzzle.end}
+                            </div>
+                        </div>
+
+                        <!-- Available Sideline Words -->
+                        <div class="space-y-2">
+                            <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider text-center">חוליות לבחירה בצדדים:</h4>
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                ${availableWords.map(word => `
+                                    <button onclick="handleWordClick('${word}')" class="px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow transition">
+                                        ${word}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-3 justify-center pt-2">
+                            <button onclick="clearChain()" class="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-sm transition">ניקוי לוח</button>
+                            <button onclick="checkChain()" class="px-6 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-sm transition shadow-lg">אישור בדיקה</button>
+                        </div>
+
+                        ${isSolved ? `
+                            <div class="p-6 bg-zinc-900 border border-emerald-500/50 rounded-2xl space-y-4 text-center">
+                                <h3 class="text-2xl font-bold text-emerald-400">השרשרת הושלמה בהצלחה!</h3>
+                                <div class="space-y-2 text-right">
+                                    <h4 class="font-bold text-zinc-300">הסברים לחוליות:</h4>
+                                    ${puzzle.middle.map((m, i) => `
+                                        <div class="text-sm text-zinc-400"><strong>${i+1}. ${m.word}:</strong> ${m.explanation}</div>
+                                    `).join('')}
+                                </div>
+                                <button onclick="router.navigate('hub')" class="px-6 py-2 bg-emerald-500 text-black font-bold rounded-xl">סיום</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            let selectedWordForSlot = null;
+            window.handleWordClick = (word) => {
+                selectedWordForSlot = word;
+                // Put into first empty slot
+                const emptyIdx = intermediateSlots.indexOf(null);
+                if (emptyIdx !== -1) {
+                    intermediateSlots[emptyIdx] = word;
+                    availableWords = availableWords.filter(w => w !== word);
+                    selectedWordForSlot = null;
+                    render();
+                }
+            };
+
+            window.handleSlotClick = (idx) => {
+                if (intermediateSlots[idx]) {
+                    availableWords.push(intermediateSlots[idx]);
+                    intermediateSlots[idx] = null;
+                    render();
+                }
+            };
+
+            window.clearChain = () => {
+                availableWords = [...availableWords, ...intermediateSlots.filter(Boolean)];
+                intermediateSlots = new Array(puzzle.middle.length).fill(null);
+                render();
+            };
+
+            window.checkChain = () => {
+                if (intermediateSlots.some(s => s === null)) {
+                    alert('נא למלא את כל החוליות בשרשרת לפני בדיקה.');
+                    return;
+                }
+                attempts++;
+                let correct = true;
+                for (let i = 0; i < intermediateSlots.length; i++) {
+                    if (intermediateSlots[i] !== puzzle.middle[i].word) {
+                        correct = false;
+                        break;
+                    }
+                }
+
+                if (correct) {
+                    isSolved = true;
+                    render();
+                } else {
+                    if (attempts >= 5) {
+                        alert('הגעת למקסימום נסיונות. הלוח יתאפס.');
+                        window.clearChain();
+                        attempts = 0;
+                    } else {
+                        alert(`שגיאה במיקום החוליות. נסה שוב (ניסיון ${attempts}/5).`);
+                    }
+                }
+            };
+
+            render();
+        }
+
+        function initWordleGame(container, puzzle, gameId, puzzleIndex) {
+            const targetWord = puzzle.word.trim();
+            const wordLen = 6;
+            let guesses = [];
+            let currentGuess = "";
+            let gameOver = false;
+            let gameWon = false;
+
+            const finalMap = { 'כ': 'ך', 'מ': 'ם', 'נ': 'ן', 'פ': 'ף', 'צ': 'ץ' };
+            const baseMap = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+
+            function getNormalizedLetter(l) {
+                return baseMap[l] || l;
+            }
+
+            function render() {
+                container.innerHTML = `
+                    <div class="max-w-md mx-auto space-y-6 py-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                            <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                            <h2 class="text-xl font-black text-white">וורדל 6 אותיות</h2>
+                            <div class="text-xs text-amber-400 font-bold">רמז: ${puzzle.clue || 'אין רמז'}</div>
+                        </div>
+
+                        <!-- Board Grid (6 rows x 6 cols) -->
+                        <div class="grid grid-rows-6 gap-2 max-w-xs mx-auto">
+                            ${Array.from({length: 6}, (_, rowIdx) => {
+                                const guess = guesses[rowIdx] || (rowIdx === guesses.length && !gameOver ? currentGuess : "");
+                                const isSubmitted = rowIdx < guesses.length;
+                                return `
+                                    <div class="grid grid-cols-6 gap-2">
+                                        ${Array.from({length: 6}, (_, colIdx) => {
+                                            let char = guess[colIdx] || "";
+                                            // Handle final letter rendering in 6th position
+                                            if (colIdx === 5 && char && finalMap[char]) {
+                                                char = finalMap[char];
+                                            }
+                                            let bgClass = "bg-zinc-900 border-zinc-800 text-white";
+                                            if (isSubmitted) {
+                                                const targetNorm = getNormalizedLetter(targetWord[colIdx]);
+                                                const charNorm = getNormalizedLetter(guess[colIdx]);
+                                                if (charNorm === targetNorm) {
+                                                    bgClass = "bg-emerald-600 border-emerald-500 text-white";
+                                                } else if (targetWord.includes(charNorm)) {
+                                                    bgClass = "bg-amber-600 border-amber-500 text-white";
+                                                } else {
+                                                    bgClass = "bg-zinc-700 border-zinc-600 text-zinc-400";
+                                                }
+                                            }
+                                            return `
+                                                <div class="w-11 h-11 sm:w-12 sm:h-12 border-2 rounded-xl flex items-center justify-center font-extrabold text-xl ${bgClass} shadow">
+                                                    ${char}
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        ${gameOver ? `
+                            <div class="p-6 bg-zinc-900 border ${gameWon ? 'border-emerald-500' : 'border-red-500'} rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold ${gameWon ? 'text-emerald-400' : 'text-red-400'}">${gameWon ? 'כל הכבוד! ניחשת את המילה!' : `הפסדת! המילה הייתה: ${targetWord}`}</h3>
+                                <button onclick="router.navigate('game', {gameId: '${gameId}', puzzleIndex: ${puzzleIndex}})" class="px-6 py-2.5 bg-yellow-500 text-black font-bold rounded-xl">משחק חדש</button>
+                            </div>
+                        ` : `
+                            <!-- Virtual Hebrew Keyboard -->
+                            <div class="space-y-1.5 pt-2">
+                                ${['ק ר א ט ו פ ₪', 'ש ד ג כ ע י ח ל', 'ז ס ב ה נ מ צ ת'].map(row => `
+                                    <div class="flex justify-center gap-1">
+                                        ${row.split(' ').map(key => `
+                                            <button onclick="handleKey('${key}')" class="px-3 py-2 sm:px-4 sm:py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold rounded-lg text-sm sm:text-base shadow transition">
+                                                ${key}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                `).join('')}
+                                <div class="flex justify-center gap-1 pt-1">
+                                    <button onclick="handleKey('ENTER')" class="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-sm shadow">אישור</button>
+                                    <button onclick="handleKey('BACK')" class="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-lg text-sm shadow">מחק</button>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            window.handleKey = (key) => {
+                if (gameOver) return;
+                if (key === 'BACK') {
+                    currentGuess = currentGuess.slice(0, -1);
+                } else if (key === 'ENTER') {
+                    if (currentGuess.length !== wordLen) {
+                        alert('יש להקליד בדיוק 6 אותיות.');
+                        return;
+                    }
+                    guesses.push(currentGuess);
+                    if (currentGuess === targetWord) {
+                        gameOver = true;
+                        gameWon = true;
+                    } else if (guesses.length >= 6) {
+                        gameOver = true;
+                        gameWon = false;
+                    }
+                    currentGuess = "";
+                } else {
+                    if (currentGuess.length < wordLen) {
+                        currentGuess += key;
+                    }
+                }
+                render();
+            };
+
+            render();
+        }
+
+        function init20QuestionsGame(container, puzzle, gameId, puzzleIndex) {
+            let items = puzzle.items || [];
+            let currentIndex = 0;
+            let answersState = new Array(items.length).fill(null); // 'V' or 'X'
+            let showAnswer = false;
+            let isFinished = false;
+
+            function render() {
+                if (isFinished) {
+                    const score = answersState.filter(s => s === 'V').length;
+                    container.innerHTML = `
+                        <div class="max-w-lg mx-auto space-y-6 py-6 text-center">
+                            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 space-y-6">
+                                <h2 class="text-3xl font-black text-white">סיכום שאלון 20 שאלות + בונוס</h2>
+                                <div class="text-5xl font-black text-amber-400">${score} / ${items.length}</div>
+                                <p class="text-zinc-400">הצלחת לענות נכון על ${score} שאלות מתוך ${items.length}.</p>
+                                <div class="flex gap-3 justify-center pt-4">
+                                    <button onclick="router.navigate('hub')" class="px-6 py-3 bg-zinc-800 text-white font-bold rounded-xl">חזרה לפורטל</button>
+                                    <button onclick="router.navigate('game', {gameId: '${gameId}', puzzleIndex: ${puzzleIndex}})" class="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl">שחק שוב</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const currentItem = items[currentIndex];
+
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto space-y-6 py-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                            <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                            <h2 class="text-xl font-black text-white">20 שאלות + בונוס</h2>
+                            <div class="text-sm font-bold text-amber-400">שאלה ${currentIndex + 1} / ${items.length}</div>
+                        </div>
+
+                        <!-- Question Card -->
+                        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+                            <div class="text-lg sm:text-xl font-extrabold text-white text-center leading-relaxed">
+                                ${currentItem.q}
+                            </div>
+
+                            ${!showAnswer ? `
+                                <div class="text-center pt-4">
+                                    <button onclick="revealAnswer()" class="px-8 py-3.5 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold rounded-2xl shadow-lg transition text-base">
+                                        הצג תשובה
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="space-y-6 pt-4 border-t border-zinc-800">
+                                    <div class="p-4 rounded-2xl bg-blue-950/40 border border-blue-500/30 text-blue-200 text-center font-medium">
+                                        ${currentItem.a}
+                                    </div>
+                                    <div class="space-y-3 text-center">
+                                        <h4 class="font-bold text-zinc-300">האם צדקת בניחוש?</h4>
+                                        <div class="flex justify-center gap-4">
+                                            <button onclick="recordAnswer('V')" class="px-8 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-lg shadow transition flex items-center gap-2">
+                                                ✅ כן (V)
+                                            </button>
+                                            <button onclick="recordAnswer('X')" class="px-8 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-lg shadow transition flex items-center gap-2">
+                                                ❌ לא (X)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `}
+                        </div>
+
+                        <!-- Navigation Bar -->
+                        <div class="flex justify-between items-center pt-2">
+                            <button onclick="prevQuestion()" ${currentIndex === 0 ? 'disabled class="opacity-40 cursor-not-allowed px-4 py-2 bg-zinc-800 text-zinc-500 rounded-xl text-sm font-semibold"' : 'class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-sm font-semibold transition"'}>
+                                הקודם
+                            </button>
+                            <div class="flex gap-1.5 overflow-x-auto max-w-xs py-1">
+                                ${items.map((_, i) => `
+                                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === currentIndex ? 'bg-yellow-500 text-black' : answersState[i] === 'V' ? 'bg-emerald-600 text-white' : answersState[i] === 'X' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400'}">
+                                        ${i + 1}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button onclick="nextQuestion()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-sm font-semibold transition">
+                                הבא
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.revealAnswer = () => {
+                showAnswer = true;
+                render();
+            };
+
+            window.recordAnswer = (status) => {
+                answersState[currentIndex] = status;
+                if (currentIndex < items.length - 1) {
+                    currentIndex++;
+                    showAnswer = false;
+                } else {
+                    isFinished = true;
+                }
+                render();
+            };
+
+            window.nextQuestion = () => {
+                if (currentIndex < items.length - 1) {
+                    currentIndex++;
+                    showAnswer = false;
+                    render();
+                } else {
+                    isFinished = true;
+                    render();
+                }
+            };
+
+            window.prevQuestion = () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    showAnswer = false;
+                    render();
+                }
+            };
+
+            render();
+        }
+
+        function initLogicRiddleGame(container, puzzle, gameId, puzzleIndex) {
+            const targetAnswer = puzzle.answer.trim();
+            const len = targetAnswer.length;
+            let currentInput = new Array(len).fill("");
+            let mistakes = 0;
+            let cluesGiven = 0;
+            let isSolved = false;
+
+            // Clue mechanism: reveal first letter, then second letter
+            function giveClue() {
+                if (cluesGiven === 0) {
+                    currentInput[0] = targetAnswer[0];
+                    cluesGiven = 1;
+                } else if (cluesGiven === 1 && len > 1) {
+                    currentInput[1] = targetAnswer[1];
+                    cluesGiven = 2;
+                } else {
+                    alert('נוצלו כל הרמזים האפשריים לחידה זו.');
+                }
+                render();
+            }
+
+            function render() {
+                container.innerHTML = `
+                    <div class="max-w-lg mx-auto space-y-6 py-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                            <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                            <h2 class="text-xl font-black text-white">הגיونية (Logic Riddle)</h2>
+                            <div class="text-sm font-bold text-amber-400">טעויות: ${mistakes}/3</div>
+                        </div>
+
+                        <!-- Riddle Box -->
+                        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 text-center space-y-3 shadow-xl">
+                            <div class="text-xs text-zinc-400">${puzzle.date || ''}</div>
+                            <h3 class="text-2xl font-black text-white leading-relaxed">${puzzle.riddle}</h3>
+                        </div>
+
+                        <!-- Letter Boxes -->
+                        <div class="flex justify-center gap-2" dir="rtl">
+                            ${Array.from({length: len}, (_, idx) => `
+                                <div class="w-12 h-14 sm:w-14 sm:h-16 rounded-xl border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center font-extrabold text-2xl text-white shadow">
+                                    ${currentInput[idx] || ''}
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <button onclick="clearRiddleInput()" class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold text-sm transition">ניקוי לוח</button>
+                            <button onclick="giveClue()" class="px-4 py-2.5 rounded-xl bg-indigo-900/60 hover:bg-indigo-900 text-indigo-200 font-semibold text-sm transition border border-indigo-500/30">תנו לי רמז (${cluesGiven}/2)</button>
+                            <button onclick="submitRiddle()" class="px-6 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-sm transition shadow-lg">אישור</button>
+                        </div>
+
+                        ${isSolved ? `
+                            <div class="p-6 bg-zinc-900 border border-emerald-500/50 rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold text-emerald-400">כל הכבוד! פתרת את החידה בהצלחה!</h3>
+                                <button onclick="router.navigate('hub')" class="px-6 py-2 bg-emerald-500 text-black font-bold rounded-xl">סיום</button>
+                            </div>
+                        ` : mistakes >= 3 ? `
+                            <div class="p-6 bg-zinc-900 border border-red-500/50 rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold text-red-400">נגמרו הנסיונות! התשובה הייתה: ${targetAnswer}</h3>
+                                <button onclick="router.navigate('game', {gameId: '${gameId}', puzzleIndex: ${puzzleIndex}})" class="px-6 py-2 bg-red-500 text-white font-bold rounded-xl">נסה שוב</button>
+                            </div>
+                        ` : `
+                            <!-- Virtual Hebrew Keyboard -->
+                            <div class="space-y-1.5 pt-2">
+                                ${['ק ר א ט ו פ ₪', 'ש ד ג כ ע י ח ל', 'ז ס ב ה נ מ צ ת'].map(row => `
+                                    <div class="flex justify-center gap-1">
+                                        ${row.split(' ').map(key => `
+                                            <button onclick="handleRiddleKey('${key}')" class="px-3 py-2 sm:px-4 sm:py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold rounded-lg text-sm sm:text-base shadow transition">
+                                                ${key}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                `).join('')}
+                                <div class="flex justify-center gap-1 pt-1">
+                                    <button onclick="handleRiddleKey('BACK')" class="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-bold rounded-lg text-sm shadow">מחק אות</button>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            window.handleRiddleKey = (key) => {
+                if (isSolved || mistakes >= 3) return;
+                if (key === 'BACK') {
+                    for (let i = len - 1; i >= 0; i--) {
+                        if (currentInput[i] !== "") {
+                            currentInput[i] = "";
+                            break;
+                        }
+                    }
+                } else {
+                    const firstEmpty = currentInput.indexOf("");
+                    if (firstEmpty !== -1) {
+                        currentInput[firstEmpty] = key;
+                    }
+                }
+                render();
+            };
+
+            window.clearRiddleInput = () => {
+                currentInput = new Array(len).fill("");
+                render();
+            };
+
+            window.submitRiddle = () => {
+                const guessStr = currentInput.join('');
+                if (guessStr.length !== len) {
+                    alert('יש למלא את כל האותיות בתיבות.');
+                    return;
+                }
+
+                if (guessStr === targetAnswer) {
+                    isSolved = true;
+                } else {
+                    mistakes++;
+                    // Check letter matching: keep matching letters, expunge wrong ones
+                    for (let i = 0; i < len; i++) {
+                        if (currentInput[i] !== targetAnswer[i]) {
+                            currentInput[i] = "";
+                        }
+                    }
+                }
+                render();
+            };
+
+            window.giveClue = giveClue;
+            render();
+        }
+
+        function initProgressiveImageGame(container, puzzle, gameId, puzzleIndex) {
+            let steps = puzzle.steps || [
+                "https://placehold.co/400x400/1e1e1e/eab308?text=Step+1",
+                "https://placehold.co/400x400/27272a/eab308?text=Step+2",
+                "https://placehold.co/400x400/3f3f46/eab308?text=Step+3",
+                "https://placehold.co/400x400/52525b/eab308?text=Step+4",
+                "https://placehold.co/400x400/71717a/eab308?text=Step+5",
+                "https://placehold.co/400x400/a1a1aa/eab308?text=Step+6",
+                "https://placehold.co/400x400/e4e4e7/eab308?text=Step+7"
+            ];
+            let currentStepIndex = 0; // 0 to steps.length - 1
+            let userGuess = "";
+            let isWon = false;
+            let isGameOver = false;
+
+            function render() {
+                container.innerHTML = `
+                    <div class="max-w-lg mx-auto space-y-6 py-4">
+                        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                            <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                            <h2 class="text-xl font-black text-white">מי אני? (Progressive Image)</h2>
+                            <div class="text-sm font-bold text-amber-400">שלב ${currentStepIndex + 1} / ${steps.length}</div>
+                        </div>
+
+                        <!-- Image Box -->
+                        <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-4 flex flex-col items-center space-y-4 shadow-xl">
+                            <div class="w-full aspect-square max-w-sm rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 relative">
+                                <img src="${steps[currentStepIndex]}" alt="Guess character" class="w-full h-full object-cover">
+                            </div>
+
+                            <!-- Steps Indicator -->
+                            <div class="flex gap-2 items-center justify-center py-2">
+                                ${steps.map((_, idx) => `
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === currentStepIndex ? 'bg-amber-500 text-black shadow-lg scale-110' : idx < currentStepIndex ? 'bg-zinc-700 text-zinc-400' : 'bg-zinc-800 text-zinc-500'}">
+                                        ${idx + 1}
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <button onclick="nextStep()" class="w-full max-w-sm py-3 px-6 rounded-2xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm transition shadow-lg">
+                                🔍 לתמונה ברורה יותר (+1 שלב)
+                            </button>
+                        </div>
+
+                        ${isWon ? `
+                            <div class="p-6 bg-zinc-900 border border-emerald-500/50 rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold text-emerald-400">כל הכבוד! זיהית את הדמות נכון: ${puzzle.answer}</h3>
+                                <button onclick="router.navigate('hub')" class="px-6 py-2 bg-emerald-500 text-black font-bold rounded-xl">סיום</button>
+                            </div>
+                        ` : isGameOver ? `
+                            <div class="p-6 bg-zinc-900 border border-red-500/50 rounded-2xl text-center space-y-4">
+                                <h3 class="text-2xl font-bold text-red-400">המשחק הסתיים! התשובה הייתה: ${puzzle.answer}</h3>
+                                <button onclick="router.navigate('game', {gameId: '${gameId}', puzzleIndex: ${puzzleIndex}})" class="px-6 py-2 bg-red-500 text-white font-bold rounded-xl">נסה שוב</button>
+                            </div>
+                        ` : `
+                            <!-- Guess Input Form -->
+                            <div class="flex gap-2">
+                                <input type="text" id="character-guess-input" placeholder="הקלד/י ניחוש (מי בתמונה?)..." class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-amber-500" value="${userGuess}">
+                                <button onclick="submitCharacterGuess()" class="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-2xl transition">אישור</button>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            window.nextStep = () => {
+                if (currentStepIndex < steps.length - 1) {
+                    currentStepIndex++;
+                } else {
+                    isGameOver = true;
+                }
+                render();
+            };
+
+            window.submitCharacterGuess = () => {
+                const inputEl = document.getElementById('character-guess-input');
+                const val = inputEl ? inputEl.value.trim() : "";
+                if (!val) return;
+
+                if (val.toLowerCase() === puzzle.answer.toLowerCase()) {
+                    isWon = true;
+                } else {
+                    alert('ניחוש שגוי! התקדמת שלב אחד קדימה לתמונה ברורה יותר.');
+                    if (currentStepIndex < steps.length - 1) {
+                        currentStepIndex++;
+                    } else {
+                        isGameOver = true;
+                    }
+                }
+                render();
+            };
+
+            render();
+        }
+
+        function renderAdmin(container, gameId) {
+            const data = getAppData();
+            const gameData = data[gameId];
+
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto space-y-6 py-4">
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                        <button onclick="router.navigate('hub')" class="text-zinc-400 hover:text-white text-sm font-semibold">← חזרה לפורטל</button>
+                        <h2 class="text-xl font-black text-white">ניהול ועריכת ${gameData.title}</h2>
+                        <button onclick="addNewPuzzle('${gameId}')" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm transition">➕ הוסף חידה חדשה</button>
+                    </div>
+
+                    <div class="space-y-4">
+                        ${gameData.puzzles.map((p, idx) => `
+                            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-white text-lg">חידה #${idx + 1} ${p.name || p.word || p.answer || ''}</h4>
+                                    <p class="text-xs text-zinc-400">מזהה ייחודי: ${p.id}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="editPuzzle('${gameId}', ${idx})" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold rounded-xl text-sm transition">עריכה</button>
+                                    <button onclick="deletePuzzle('${gameId}', ${idx})" class="px-4 py-2 bg-red-900/40 hover:bg-red-900 text-red-200 font-semibold rounded-xl text-sm transition">מחיקה</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.addNewPuzzle = (gameId) => {
+            const data = getAppData();
+            const newId = Date.now();
+            let newPuzzle = {};
+
+            if (gameId === 'connections') {
+                newPuzzle = {
+                    id: newId,
+                    name: "קבוצה חדשה",
+                    groups: [
+                        { category: "קטגוריה 1", words: ["מילה1", "מילה2", "מילה3", "מילה4"] },
+                        { category: "קטגוריה 2", words: ["מילה5", "מילה6", "מילה7", "מילה8"] },
+                        { category: "קטגוריה 3", words: ["מילה9", "מילה10", "מילה11", "מילה12"] },
+                        { category: "קטגוריה 4", words: ["מילה13", "מילה14", "מילה15", "מילה16"] }
+                    ]
+                };
+            } else if (gameId === 'chain') {
+                newPuzzle = {
+                    id: newId,
+                    start: "התחלה",
+                    end: "סיום",
+                    middle: [
+                        { word: "חוליה1", explanation: "הסבר 1" },
+                        { word: "חוליה2", explanation: "הסבר 2" }
+                    ]
+                };
+            } else if (gameId === 'wordle') {
+                newPuzzle = { id: newId, word: "מחשבה", clue: "רמז לדוגמה" };
+            } else if (gameId === 'questions20') {
+                newPuzzle = {
+                    id: newId,
+                    title: "שאלון חדש",
+                    items: Array.from({length: 21}, (_, i) => ({ id: i+1, q: `שאלה ${i+1}`, a: `תשובה ${i+1}` }))
+                };
+            } else if (gameId === 'logicRiddle') {
+                newPuzzle = { id: newId, riddle: "חידת הגיון חדשה כאן", answer: "תשובה", date: "01.01.2026" };
+            } else if (gameId === 'progressiveImage') {
+                newPuzzle = {
+                    id: newId,
+                    answer: "אישיות",
+                    steps: Array.from({length: 6}, (_, i) => `https://placehold.co/400x400/27272a/eab308?text=Step+${i+1}`)
+                };
+            }
+
+            data[gameId].puzzles.push(newPuzzle);
+            saveAppData(data);
+            renderAdmin(document.getElementById('app'), gameId);
+        };
+
+        window.deletePuzzle = (gameId, index) => {
+            const data = getAppData();
+            if (data[gameId].puzzles.length <= 1) {
+                alert('חובה להשאיר לפחות חידה אחת במערכת.');
+                return;
+            }
+            data[gameId].puzzles.splice(index, 1);
+            saveAppData(data);
+            renderAdmin(document.getElementById('app'), gameId);
+        };
+
+        window.editPuzzle = (gameId, index) => {
+            const data = getAppData();
+            const p = data[gameId].puzzles[index];
+            const newJson = prompt("ערוך את נתוני החידה בפורמט JSON:", JSON.stringify(p, null, 2));
+            if (newJson) {
+                try {
+                    const parsed = JSON.parse(newJson);
+                    data[gameId].puzzles[index] = parsed;
+                    saveAppData(data);
+                    renderAdmin(document.getElementById('app'), gameId);
+                    alert('החידה עודכנה בהצלחה!');
+                } catch (e) {
+                    alert('שגיאה בפורמט ה-JSON. הנתונים לא נשמרו.');
+                }
+            }
+        };
+
+        // Initialize application on load
+        window.onload = function() {
+            router.navigate('hub');
+        };
+    </script>
+</body>
+</html>
