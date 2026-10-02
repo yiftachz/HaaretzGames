@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>פורטל המשחקים העברי</title>
+    <title>מזל טוב לתמר</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -50,7 +50,7 @@
     <main id="app" class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6"></main>
 
     <footer class="border-t border-zinc-800 py-6 text-center text-xs text-zinc-500 bg-zinc-950 mt-auto flex flex-col items-center gap-2">
-        <p>פורטל משחקים עברי מתקדם • מסונכרן אוטומטית</p>
+        <p>יום הולדת שמח • לתמר המהממת/p>
         <button onclick="tryAdminAccess()" class="text-zinc-600 hover:text-zinc-400 transition text-[10px]">⚙️ כניסת מנהל</button>
     </footer>
 
@@ -82,7 +82,7 @@
             },
             logicRiddle: {
                 announcement: "חירום, חירום, ענו מהר\nזו בטח יולי, יולי ברגר\nאך אם תרצו אתם להתקשר\nלכו חפשו מכשיר אחר",
-                code: 27
+                code: 22
             },
             progressiveImage: {
                 announcement: "יושב על מדף\nרב בי הדף\nמזמן לא נפתחתי\nאבק רב צברתי\nדי, i had enough",
@@ -428,7 +428,7 @@
                                     <p class="text-zinc-400 text-sm mb-6">${g.desc}</p>
                                 </div>
                                 <div class="flex items-center gap-3 pt-4 border-t border-zinc-800/80">
-                                    <button onclick="requestGameAccess('${g.id}')" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-xl text-sm transition shadow-lg">שחק</button>
+                                    <button onclick="requestGameAccess('${g.id}')" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-xl text-sm transition shadow-lg">שחקי</button>
                                     ${isAdmin ? `<button onclick="router.navigate('admin', {gameId: '${g.id}'})" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold py-2.5 px-4 rounded-xl text-sm transition">⚙️ </button>` : ''}
                                 </div>
                             </div>
