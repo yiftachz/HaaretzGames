@@ -222,7 +222,7 @@
                 const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
                 
                 const getRes = await fetch(apiUrl, {
-                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json', 'Cache-Control': 'no-cache' }
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }, cache: 'no-store' // not a Cache-Control header: GitHub's CORS rejects it from browsers
                 });
                 let sha = null;
                 if (getRes.ok) {
@@ -237,7 +237,7 @@
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`,
-                        'Accept': 'vnd.github+json',
+                        'Accept': 'application/vnd.github+json',
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -269,7 +269,7 @@
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`;
             let sha = null;
             const getRes = await fetch(apiUrl, {
-                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'vnd.github+json', 'Cache-Control': 'no-cache' }
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }, cache: 'no-store' // not a Cache-Control header: GitHub's CORS rejects it from browsers
             });
             if (getRes.ok) {
                 const fileData = await getRes.json();
@@ -281,7 +281,7 @@
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Accept': 'vnd.github+json',
+                    'Accept': 'application/vnd.github+json',
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
