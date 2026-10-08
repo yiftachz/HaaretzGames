@@ -62,6 +62,9 @@
             path: "puzzles.json"
         };
 
+        // Switch: true = show the riddle + access-code popup before each game; false = open games directly
+        const ENABLE_ACCESS_CODES = false;
+
         // Config for game announcements and integer codes
         const GAME_ACCESS_CONFIG = {
             connections: {
@@ -163,6 +166,15 @@
             return localStorage.getItem('hebrew_portal_gh_token') || '';
         }
 
+        // Remote data is loaded once per page load (not on every screen change),
+        // so a stale CDN copy can't overwrite edits made during this session.
+        let remoteDataPromise = null;
+
+        function loadRemoteDataOnce() {
+            if (!remoteDataPromise) remoteDataPromise = fetchRemoteData();
+            return remoteDataPromise;
+        }
+
         async function fetchRemoteData() {
             try {
                 const res = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.path}?t=${Date.now()}`);
@@ -172,7 +184,13 @@
                     localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(remoteData));
                     return remoteData;
                 }
-            } catch (e) {}
+                console.warn(`Remote data load failed: HTTP ${res.status}`);
+            } catch (e) {
+                console.warn('Remote data load failed:', e);
+            }
+            showToast(localStorage.getItem('hebrew_game_portal_v3')
+                ? "לא ניתן לטעון חידות מ-GitHub — מוצגת הגרסה השמורה במכשיר"
+                : "לא ניתן לטעון חידות מ-GitHub — מוצגות חידות ברירת המחדל", true);
             return null;
         }
 
@@ -194,7 +212,10 @@
             localStorage.setItem('hebrew_game_portal_v3', JSON.stringify(data));
             
             const token = getGithubToken();
-            if (!token) return;
+            if (!token) {
+                showToast("נשמר במכשיר זה בלבד — הגדר טוקן GitHub כדי לסנכרן", true);
+                return false;
+            }
 
             try {
                 showToast("מעדכן נתונים ב-GitHub...");
@@ -229,11 +250,15 @@
 
                 if (putRes.ok) {
                     showToast("הנתונים סונכרנו בהצלחה עם GitHub!");
-                } else {
-                    showToast("שגיאה בסנכרון מול GitHub", true);
+                    return true;
                 }
+                console.error('GitHub sync failed:', putRes.status, await putRes.text());
+                showToast("שגיאה בסנכרון מול GitHub", true);
+                return false;
             } catch (err) {
                 console.error(err);
+                showToast("שגיאה בסנכרון מול GitHub", true);
+                return false;
             }
         }
 
@@ -319,7 +344,7 @@
         // Intercept game clicks to trigger the access code popup first
         function requestGameAccess(gameId) {
             const config = GAME_ACCESS_CONFIG[gameId];
-            if (!config) {
+            if (!ENABLE_ACCESS_CODES || !config) {
                 // Fallback if config is missing
                 router.navigate('game', { gameId, puzzleIndex: 0 });
                 return;
@@ -390,7 +415,7 @@
                 const app = document.getElementById('app');
                 app.innerHTML = '<div class="text-center py-20 text-zinc-500">טוען נתונים...</div>';
                 
-                await fetchRemoteData();
+                await loadRemoteDataOnce();
 
                 app.innerHTML = '';
                 if (route === 'hub') renderHub(app, params.isAdmin || false);
@@ -440,6 +465,10 @@
                             <p class="text-xs text-zinc-400">הכנס את ה-Personal Access Token שלך כדי לאפשר סנכרון אוטומטי בין מכשירים.</p>
                             <input type="password" id="gh-token-input" value="${getGithubToken()}" placeholder="ghp_xxxxxxxxxxxx" class="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-sm">
                             <button onclick="saveToken()" class="px-6 py-2.5 bg-yellow-500 text-black font-bold rounded-xl text-sm">שמור טוקן</button>
+                            <div class="flex flex-wrap gap-3 pt-4 border-t border-zinc-800">
+                                <button onclick="manualSync()" class="px-6 py-2.5 bg-yellow-500 text-black font-bold rounded-xl text-sm">סנכרן עכשיו ל-GitHub</button>
+                                <button onclick="downloadDataJson()" class="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl text-sm">הורד גיבוי JSON</button>
+                            </div>
                         </div>
                     ` : ''}
                 </div>
@@ -450,6 +479,17 @@
             const val = document.getElementById('gh-token-input').value.trim();
             localStorage.setItem('hebrew_portal_gh_token', val);
             showToast("הטוקן נשמר בהצלחה!");
+        };
+
+        window.manualSync = () => saveAppData(getAppData());
+
+        window.downloadDataJson = () => {
+            const blob = new Blob([JSON.stringify(getAppData(), null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = GITHUB_CONFIG.path;
+            a.click();
+            URL.revokeObjectURL(a.href);
         };
 
         function renderNextPuzzleButton(gameId, currentIndex, totalPuzzles) {
@@ -1205,7 +1245,8 @@
             try {
                 showToast(`מעלה תמונה ${index+1} ל-GitHub...`);
                 const b64 = await fileToBase64(file);
-                const path = `images/step_${index + 1}.jpg`;
+                // Unique name per upload so the raw.githubusercontent CDN never serves a stale cached image
+                const path = `images/step_${index + 1}_${Date.now()}.jpg`;
                 const remoteUrl = await uploadImageToGitHub(path, b64);
                 
                 document.getElementById(`f_img_${index}`).value = remoteUrl;
