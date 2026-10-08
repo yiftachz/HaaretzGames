@@ -78,6 +78,36 @@
           "המנטליסט",
           "שרית חדד"
         ]
+      },
+      {
+        "id": 1791476661678,
+        "name": "סתם",
+        "start": "א",
+        "end": "ו",
+        "middle": [
+          {
+            "word": "ב",
+            "explanation": ""
+          },
+          {
+            "word": "ג",
+            "explanation": ""
+          },
+          {
+            "word": "ד",
+            "explanation": ""
+          },
+          {
+            "word": "ה",
+            "explanation": ""
+          }
+        ],
+        "distractors": [
+          "ז",
+          "ח",
+          "ט",
+          "ת"
+        ]
       }
     ]
   },
